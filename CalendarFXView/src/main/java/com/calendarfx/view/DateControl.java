@@ -31,6 +31,7 @@ import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -45,6 +46,7 @@ import com.calendarfx.model.CalendarSource;
 import com.calendarfx.model.Entry;
 import com.calendarfx.model.Interval;
 import com.calendarfx.util.LoggingDomain;
+import com.calendarfx.util.Util;
 import com.calendarfx.view.page.DayPage;
 import com.calendarfx.view.popover.DatePopOver;
 import com.calendarfx.view.popover.EntryPopOverContentPane;
@@ -59,8 +61,10 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyListProperty;
 import javafx.beans.property.ReadOnlyListWrapper;
+import javafx.beans.property.SetProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleSetProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -481,13 +485,13 @@ public abstract class DateControl extends CalendarFXControl {
         }
     }
 
-    // dragged entry support
-    private final ObjectProperty<DraggedEntry> draggedEntry = new SimpleObjectProperty<>(this, "draggedEntry"); //$NON-NLS-1$
+    // dragged entries support
+    private final SimpleSetProperty<DraggedEntry> draggedEntries = new SimpleSetProperty<>(this,"draggedEntries"); 
 
     /**
-     * Stores a {@link DraggedEntry} instance, which serves as a wrapper around
-     * the actual entry that is currently being edited by the user. The
-     * framework creates this wrapper when the user starts a drag and adds it to
+     * Stores a Set of {@link DraggedEntry} instances, which each {@link DraggedEntry}, 
+     * serves as a wrapper around the actual entry that is currently being edited by the user. 
+     * The framework creates this wrapper when the user starts a drag and adds it to
      * the date control. This allows the framework to show the entry at its old
      * and new location at the same time. It also ensures that the calendar does
      * not fire any events before the user has committed the entry to a new
@@ -495,26 +499,41 @@ public abstract class DateControl extends CalendarFXControl {
      *
      * @return the dragged entry
      */
-    public final ObjectProperty<DraggedEntry> draggedEntryProperty() {
-        return draggedEntry;
+    public final SimpleSetProperty<DraggedEntry> draggedEntriesProperty() {
+        if(draggedEntries.get() == null){
+            draggedEntries.set(FXCollections.observableSet());
+        }
+        return draggedEntries;
     }
 
     /**
-     * Returns the value of {@link #draggedEntryProperty()}.
+     * Returns the value of {@link #draggedEntriesProperty()}.
      *
      * @return the dragged entry
      */
-    public final DraggedEntry getDraggedEntry() {
-        return draggedEntry.get();
+    public final ObservableSet<DraggedEntry> getDraggedEntries() {
+        return draggedEntries.get();
     }
 
     /**
-     * Sets the value of {@link #draggedEntryProperty()}.
+     * Sets the value of {@link #draggedEntriesProperty()}.
      *
      * @param entry the dragged entry
      */
-    public final void setDraggedEntry(DraggedEntry entry) {
-        draggedEntryProperty().set(entry);
+    public final void setDraggedEntries(Collection<DraggedEntry> entries) {
+        draggedEntriesProperty().get().clear();
+        if(entries!=null && !entries.isEmpty()){
+            draggedEntriesProperty().get().addAll(entries);
+        }
+    }
+    
+    /**
+     * Sets the value of {@link #draggedEntriesProperty()}.
+     *
+     * @param entry the dragged entry
+     */
+    public final void addDraggedEntry(DraggedEntry entry) {
+        draggedEntriesProperty().get().add(entry);
     }
 
     /**
@@ -2429,7 +2448,7 @@ public abstract class DateControl extends CalendarFXControl {
         Bindings.bindBidirectional(otherControl.entryFactoryProperty(), entryFactoryProperty());
         Bindings.bindBidirectional(otherControl.defaultCalendarProviderProperty(), defaultCalendarProviderProperty());
         Bindings.bindBidirectional(otherControl.virtualGridProperty(), virtualGridProperty());
-        Bindings.bindBidirectional(otherControl.draggedEntryProperty(), draggedEntryProperty());
+        Bindings.bindBidirectional(otherControl.draggedEntriesProperty(), draggedEntriesProperty());
         Bindings.bindBidirectional(otherControl.requestedTimeProperty(), requestedTimeProperty());
 
         Bindings.bindBidirectional(otherControl.selectionModeProperty(), selectionModeProperty());
@@ -2482,7 +2501,7 @@ public abstract class DateControl extends CalendarFXControl {
         Bindings.unbindBidirectional(otherControl.entryFactoryProperty(), entryFactoryProperty());
         Bindings.unbindBidirectional(otherControl.defaultCalendarProviderProperty(), defaultCalendarProviderProperty());
         Bindings.unbindBidirectional(otherControl.virtualGridProperty(), virtualGridProperty());
-        Bindings.unbindBidirectional(otherControl.draggedEntryProperty(), draggedEntryProperty());
+        Bindings.unbindBidirectional(otherControl.draggedEntriesProperty(), draggedEntriesProperty());
         Bindings.unbindBidirectional(otherControl.requestedTimeProperty(), requestedTimeProperty());
 
         Bindings.unbindBidirectional(otherControl.selectionModeProperty(), selectionModeProperty());

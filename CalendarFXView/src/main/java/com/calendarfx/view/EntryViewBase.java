@@ -190,11 +190,11 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
         dateControlProperty().addListener((observable, oldControl, newControl) -> {
             if (oldControl != null) {
                 oldControl.getSelections().removeListener(weakSelectionListener);
-                oldControl.draggedEntryProperty().removeListener(weakDraggedListener);
+                oldControl.draggedEntriesProperty().removeListener(weakDraggedListener);
             }
             if (newControl != null) {
                 newControl.getSelections().addListener(weakSelectionListener);
-                newControl.draggedEntryProperty().addListener(weakDraggedListener);
+                newControl.draggedEntriesProperty().addListener(weakDraggedListener);
             }
 
             bindVisibility();
@@ -360,9 +360,11 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
     private void updateDragged() {
         DateControl control = getDateControl();
         if (control != null) {
-            DraggedEntry draggedEntry = control.getDraggedEntry();
-            if (draggedEntry != null) {
-                if (draggedEntry.getOriginalEntry().equals(getEntry())) {
+            DraggedEntry draggedEntry = control.getDraggedEntries().stream()
+                    .filter(entryDrag -> entryDrag.getOriginalEntry().getId().equals(getEntry().getId()))
+                    .findFirst()
+                    .orElse(null);
+            if (draggedEntry != null && draggedEntry.getOriginalEntry().equals(getEntry())) {
                     switch (draggedEntry.getDragMode()) {
                         case END_TIME:
                             draggedEnd.set(true);
@@ -376,11 +378,6 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
                         default:
                             break;
                     }
-                } else {
-                    dragged.set(false);
-                    draggedStart.set(false);
-                    draggedEnd.set(false);
-                }
             } else {
                 dragged.set(false);
                 draggedStart.set(false);
@@ -877,6 +874,7 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
      *
      * @return the property sheet items
      */
+    @Override
     public ObservableList<Item> getPropertySheetItems() {
 
         ObservableList<Item> items = FXCollections.observableArrayList();
