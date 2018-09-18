@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.temporal.ChronoField;
 import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 
 import com.calendarfx.model.Calendar;
 import com.calendarfx.model.Entry;
+import com.calendarfx.model.Interval;
 import com.calendarfx.util.LoggingDomain;
 import com.calendarfx.view.DateControl;
 import com.calendarfx.view.DayEntryView;
@@ -185,7 +187,7 @@ public class DayViewEditController {
         if (!(evt.getTarget() instanceof EntryViewBase)) {
             return;
         }
-        Entry entry = ((EntryViewBase) evt.getTarget()).getEntry();
+        Entry<?> entry = ((EntryViewBase<?>) evt.getTarget()).getEntry();
         if (entry == null) {
             return;
         }
@@ -252,19 +254,27 @@ public class DayViewEditController {
                     dayEntryView.getEntry(), dragMode);
             draggedEntry.setOffsetDuration(offsetDuration);
 
-            dayView.setDraggedEntries(dayView.getSelections().stream()
-                    .filter(selectedEntry -> !selectedEntry.getCalendar()
-                            .isReadOnly()
-                            && dayView.getCalendarVisibilityMap()
-                                    .get(selectedEntry.getCalendar()) != null
-                                            ? dayView.getCalendarVisibilityMap()
-                                                    .get(selectedEntry
-                                                            .getCalendar())
-                                                    .get()
-                                            : false)
-                    .map(selectedEntry -> new DraggedEntry(selectedEntry,
-                            dragMode))
-                    .collect(Collectors.toList()));
+            if (!dayView.getSelections().isEmpty() && entry != null) {
+
+                dayView.setDraggedEntries(dayView.getSelections().stream()
+                        .filter(selectedEntry -> !selectedEntry.getCalendar()
+                                .isReadOnly()
+                                && !selectedEntry.isFullDay()
+                                && dayView.getCalendarVisibilityMap()
+                                        .get(selectedEntry
+                                                .getCalendar()) != null
+                                                        ? dayView
+                                                                .getCalendarVisibilityMap()
+                                                                .get(selectedEntry
+                                                                        .getCalendar())
+                                                                .get()
+                                                        : false)
+                        .map(selectedEntry -> new DraggedEntry(selectedEntry,
+                                dragMode))
+                        .collect(Collectors.toList()));
+            } else {
+                dayView.addDraggedEntry(new DraggedEntry(entry, dragMode));
+            }
         }
     }
 
@@ -280,15 +290,23 @@ public class DayViewEditController {
             return;
         }
 
-        dayEntryView.getProperties().put("dragged", false); //$NON-NLS-1$
-        dayEntryView.getProperties().put("dragged-start", false); //$NON-NLS-1$
-        dayEntryView.getProperties().put("dragged-end", false); //$NON-NLS-1$
-
         /*
          * We might run in the sampler application. Then the entry view will not
          * be inside a date control.
          */
         Set<DraggedEntry> draggedEntries = dayView.getDraggedEntries();
+        boolean applyChanges = false;
+
+        if (!draggedEntries.isEmpty()) {
+            DraggedEntry anyDraggedEntry = draggedEntries.stream().filter(
+                    x -> x.getOriginalEntry().getId().equals(entry.getId()))
+                    .findFirst().orElse(null);
+            // Check if the interval has changed
+            if (anyDraggedEntry != null && !anyDraggedEntry.getInterval()
+                    .equals(entry.getInterval())) {
+                applyChanges = confirmChanges();
+            }
+        }
 
         if (draggedEntries != null && !draggedEntries.isEmpty()) {
             for (Entry<?> selectedEntry : dayView.getSelections()) {
@@ -296,12 +314,54 @@ public class DayViewEditController {
                         .filter(entryD -> entryD.getOriginalEntry().getId()
                                 .equals(selectedEntry.getId()))
                         .findFirst().orElse(null);
-                if (draggedEntry != null) {
-                    selectedEntry.setInterval(draggedEntry.getInterval());
+                if (draggedEntry != null && !selectedEntry.getInterval()
+                        .equals(draggedEntry.getInterval())) {
+                    if (applyChanges) {
+                        Interval newInterval = validateNewInterval(
+                                draggedEntry);
+                        boolean isAllDay = checkIntervalAllDay(newInterval);
+                        selectedEntry.setInterval(newInterval);
+                        selectedEntry.setFullDay(isAllDay);
+                    } else {
+                        selectedEntry.setInterval(
+                                draggedEntry.getOriginalEntry().getInterval());
+                    }
                 }
             }
             dayView.setDraggedEntries(null);
         }
+
+        dayEntryView.getProperties().put("dragged", false); //$NON-NLS-1$
+        dayEntryView.getProperties().put("dragged-start", false); //$NON-NLS-1$
+        dayEntryView.getProperties().put("dragged-end", false); //$NON-NLS-1$
+    }
+
+    private Interval validateNewInterval(DraggedEntry draggedEntry) {
+        LocalDateTime startDateTime = grid(
+                draggedEntry.getInterval().getStartDateTime());
+        LocalDateTime endDateTime = grid(
+                draggedEntry.getInterval().getEndDateTime());
+
+        if (endDateTime.getHour() == 0 && endDateTime.getMinute() == 0) {
+            endDateTime = endDateTime.minus(1,
+                    ChronoField.MILLI_OF_DAY.getBaseUnit());
+        }
+
+        Interval newInterval = new Interval(startDateTime, endDateTime);
+        return newInterval;
+    }
+
+    protected boolean confirmChanges() {
+         return true;
+    }
+
+    private boolean checkIntervalAllDay(Interval interval) {
+        if (interval.getStartDateTime().toLocalTime().equals(LocalTime.MIN)
+                && interval.getEndDateTime().toLocalTime()
+                        .equals(LocalTime.of(23, 59, 59, 999000000))) {
+            return true;
+        }
+        return false;
     }
 
     private void mouseDragged(MouseEvent evt) {

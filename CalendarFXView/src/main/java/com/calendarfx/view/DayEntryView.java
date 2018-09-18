@@ -39,8 +39,6 @@ public class DayEntryView extends EntryViewBase<DayView> {
      */
     public DayEntryView(Entry<?> entry) {
         super(entry);
-
-//		setMinSize(0, 0);
     }
 
     @Override
