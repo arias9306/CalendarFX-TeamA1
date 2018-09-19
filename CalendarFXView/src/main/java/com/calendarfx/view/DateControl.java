@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import org.controlsfx.control.PopOver;
 import org.controlsfx.control.PopOver.ArrowLocation;
@@ -328,6 +329,9 @@ public abstract class DateControl extends CalendarFXControl {
         });
 
         setContextMenuCallback(new ContextMenuProvider());
+        
+        // Mouse Release callback will always return true by default
+        setReleaseDragCallback(param -> true);
 
         setEntryContextMenuCallback(param -> {
             EntryViewBase<?> entryView = param.getEntryView();
@@ -1400,6 +1404,54 @@ public abstract class DateControl extends CalendarFXControl {
         defaultCalendarProviderProperty().set(provider);
     }
 
+    private final ObjectProperty<Callback<Set<DraggedEntry>, Boolean>> releaseDragCallback = new SimpleObjectProperty<>(this, "releaseDragCallback");
+    
+    /**
+     * This callback will be invoked when user releases the mouse click 
+     * while doing drag & drop over the entries. It will be useful if a validation 
+     * is required before accepting the changes for all dragged entries if it is 
+     * necessary. 
+     * 
+     * <h2>Code Example</h2>
+     * Example of an implementation:
+     * <p>
+     * <p>
+     * <pre>
+     * {@code
+     * setReleaseDragCallback(param -&gt; {
+     *    Alert alert = new Alert(AlertType.CONFIRMATION);
+     *    alert.setTitle("Confirmation Dialog");
+     *    alert.setHeaderText("Are you sure you want to perform these changes?");
+     *    alert.setContentText(null);
+     *    return alert.showAndWait().get() == ButtonType.OK;   
+     * });
+     * </pre>
+     * }
+     * 
+     * @return the releaseDragCallback property.
+     */
+    public final ObjectProperty<Callback<Set<DraggedEntry>, Boolean>> releaseDragCallbackProperty() {
+        return releaseDragCallback;
+    }
+    
+    /**
+     * Returns the value of {@link #releaseDragCallbackProperty()}.
+     *
+     * @return the callback for release dragging feature.
+     */
+    public final Callback<Set<DraggedEntry>, Boolean> getReleaseDragCallback() {
+        return releaseDragCallbackProperty().get();
+    }
+    
+    /**
+     * Sets the value of {@link #releaseDragCallbackProperty()}.
+     * 
+     * @param callback
+     */
+    public final void setReleaseDragCallback(Callback<Set<DraggedEntry>, Boolean> callback) {
+        releaseDragCallbackProperty().set(callback);
+    }
+    
     private void updateCalendarList() {
         List<Calendar> removedCalendars = new ArrayList<>(calendars);
         List<Calendar> newCalendars = new ArrayList<>();

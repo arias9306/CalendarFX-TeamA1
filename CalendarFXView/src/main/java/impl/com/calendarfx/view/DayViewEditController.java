@@ -45,6 +45,7 @@ import javafx.scene.Cursor;
 import javafx.scene.Parent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.util.Callback;
 
 public class DayViewEditController {
 
@@ -295,36 +296,22 @@ public class DayViewEditController {
          * be inside a date control.
          */
         Set<DraggedEntry> draggedEntries = dayView.getDraggedEntries();
-        boolean applyChanges = false;
 
         if (!draggedEntries.isEmpty()) {
-            DraggedEntry anyDraggedEntry = draggedEntries.stream().filter(
-                    x -> x.getOriginalEntry().getId().equals(entry.getId()))
-                    .findFirst().orElse(null);
-            // Check if the interval has changed
-            if (anyDraggedEntry != null && !anyDraggedEntry.getInterval()
-                    .equals(entry.getInterval())) {
-                applyChanges = confirmChanges();
-            }
-        }
 
-        if (draggedEntries != null && !draggedEntries.isEmpty()) {
-            for (Entry<?> selectedEntry : dayView.getSelections()) {
-                DraggedEntry draggedEntry = draggedEntries.stream()
-                        .filter(entryD -> entryD.getOriginalEntry().getId()
-                                .equals(selectedEntry.getId()))
-                        .findFirst().orElse(null);
-                if (draggedEntry != null && !selectedEntry.getInterval()
-                        .equals(draggedEntry.getInterval())) {
-                    if (applyChanges) {
+            if (confirmChanges(draggedEntries)) {
+                for (Entry<?> selectedEntry : dayView.getSelections()) {
+                    DraggedEntry draggedEntry = draggedEntries.stream()
+                            .filter(entryD -> entryD.getOriginalEntry().getId()
+                                    .equals(selectedEntry.getId()))
+                            .findFirst().orElse(null);
+                    if (draggedEntry != null && !selectedEntry.getInterval()
+                            .equals(draggedEntry.getInterval())) {
                         Interval newInterval = validateNewInterval(
                                 draggedEntry);
                         boolean isAllDay = checkIntervalAllDay(newInterval);
                         selectedEntry.setInterval(newInterval);
                         selectedEntry.setFullDay(isAllDay);
-                    } else {
-                        selectedEntry.setInterval(
-                                draggedEntry.getOriginalEntry().getInterval());
                     }
                 }
             }
@@ -351,8 +338,41 @@ public class DayViewEditController {
         return newInterval;
     }
 
-    protected boolean confirmChanges() {
-         return true;
+    /**
+     * Validation method to confirm whether or not entries intervals should be
+     * changed. This works by looking for any dragged entry has a different
+     * interval compared to its original entry. <br>
+     * <br>
+     * 
+     * {@link DateControl#getReleaseDragCallback()} is used here to have a
+     * control over the {@link MouseEvent#MOUSE_RELEASED} event in case a
+     * developer wants to validate the changes with an alert or any other
+     * process in his/her implementation. <br>
+     * <br>
+     * 
+     * The value returned by default in <strong>call</strong> method is true due
+     * to component will always do the changes.
+     * 
+     * @param draggedEntries
+     *            that are currently being dragged.
+     * @return
+     */
+    private boolean confirmChanges(Set<DraggedEntry> draggedEntries) {
+
+        DraggedEntry anyDraggedEntry = draggedEntries.stream()
+                .filter(x -> x.getOriginalEntry().getId().equals(entry.getId()))
+                .findFirst().orElse(null);
+
+        if (anyDraggedEntry != null
+                ? anyDraggedEntry.getInterval().equals(entry.getInterval())
+                : true) {
+            return false;
+        }
+
+        Callback<Set<DraggedEntry>, Boolean> releaseCallback = dayView
+                .getReleaseDragCallback();
+        return releaseCallback != null ? releaseCallback.call(draggedEntries)
+                : true;
     }
 
     private boolean checkIntervalAllDay(Interval interval) {
