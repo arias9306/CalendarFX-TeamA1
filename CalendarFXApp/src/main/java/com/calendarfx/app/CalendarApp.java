@@ -96,7 +96,7 @@ public class CalendarApp extends Application {
         primaryStage.setTitle("Calendar");
         primaryStage.setScene(scene);
         primaryStage.setWidth(1300);
-        primaryStage.setHeight(1000);
+        primaryStage.setHeight(700);
         primaryStage.centerOnScreen();
         primaryStage.show();
     }
