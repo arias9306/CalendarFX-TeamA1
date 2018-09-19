@@ -46,7 +46,7 @@ public final class CalendarFX {
 
             version = props.getProperty("calendarfx.version", "1.0.0"); //$NON-NLS-1$ //$NON-NLS-2$
 
-            LoggingDomain.CONFIG.info("CalendarFX Version: " + version); //$NON-NLS-1$
+            LoggingDomain.CONFIG.fine("CalendarFX Version: " + version);
         }
         return version;
     }
