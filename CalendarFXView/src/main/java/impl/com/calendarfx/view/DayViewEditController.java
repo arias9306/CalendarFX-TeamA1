@@ -40,6 +40,7 @@ import com.calendarfx.view.EntryViewBase;
 import com.calendarfx.view.VirtualGrid;
 import com.calendarfx.view.WeekView;
 
+import javafx.application.Platform;
 import javafx.event.EventHandler;
 import javafx.scene.Cursor;
 import javafx.scene.Parent;
@@ -253,7 +254,8 @@ public class DayViewEditController {
         if (dayView != null) {
             if (!dayView.getSelections().isEmpty()) {
 
-                dayView.setDraggedEntries(dayView.getSelections().stream()
+                Platform.runLater(() -> dayView.setDraggedEntries(dayView
+                        .getSelections().stream()
                         .filter(selectedEntry -> !selectedEntry.getCalendar()
                                 .isReadOnly()
                                 && !selectedEntry.isFullDay()
@@ -268,7 +270,7 @@ public class DayViewEditController {
                                                         : false)
                         .map(selectedEntry -> new DraggedEntry(selectedEntry,
                                 dragMode))
-                        .collect(Collectors.toList()));
+                        .collect(Collectors.toList())));
             } else {
                 dayView.addDraggedEntry(new DraggedEntry(entry, dragMode));
             }
