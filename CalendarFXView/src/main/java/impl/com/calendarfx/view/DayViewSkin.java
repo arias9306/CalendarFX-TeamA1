@@ -124,9 +124,7 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T>
 
         setupCurrentTimeMarkerSupport();
 
-        view.draggedEntriesProperty().get().addListener(
-                (Change<? extends DraggedEntry> change) -> addOrRemoveDraggedEntryView(
-                        change));
+        view.draggedEntriesProperty().get().addListener(this::addOrRemoveDraggedEntryView);
 
         view.showCurrentTimeMarkerProperty()
                 .addListener(it -> updateTimelineVisibility());
