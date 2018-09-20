@@ -255,7 +255,7 @@ public class DayViewEditController {
                     dayEntryView.getEntry(), dragMode);
             draggedEntry.setOffsetDuration(offsetDuration);
 
-            if (!dayView.getSelections().isEmpty() && entry != null) {
+            if (!dayView.getSelections().isEmpty()) {
 
                 dayView.setDraggedEntries(dayView.getSelections().stream()
                         .filter(selectedEntry -> !selectedEntry.getCalendar()
@@ -333,9 +333,7 @@ public class DayViewEditController {
             endDateTime = endDateTime.minus(1,
                     ChronoField.MILLI_OF_DAY.getBaseUnit());
         }
-
-        Interval newInterval = new Interval(startDateTime, endDateTime);
-        return newInterval;
+        return new Interval(startDateTime, endDateTime);
     }
 
     /**
@@ -376,12 +374,9 @@ public class DayViewEditController {
     }
 
     private boolean checkIntervalAllDay(Interval interval) {
-        if (interval.getStartDateTime().toLocalTime().equals(LocalTime.MIN)
+        return (interval.getStartDateTime().toLocalTime().equals(LocalTime.MIN)
                 && interval.getEndDateTime().toLocalTime()
-                        .equals(LocalTime.of(23, 59, 59, 999000000))) {
-            return true;
-        }
-        return false;
+                        .equals(LocalTime.of(23, 59, 59, 999000000)));
     }
 
     private void mouseDragged(MouseEvent evt) {
@@ -539,8 +534,6 @@ public class DayViewEditController {
 
         if (isMinimumDuration(entry, entry.getStartAsLocalDateTime(),
                 locationTime)) {
-
-            // LOGGER.finer("dragged entry: " + draggedEntry.getInterval());
 
             LocalDate startDate;
             LocalDate endDate;
