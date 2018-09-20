@@ -251,10 +251,6 @@ public class DayViewEditController {
 
         DayView dayView = dayEntryView.getDateControl();
         if (dayView != null) {
-            DraggedEntry draggedEntry = new DraggedEntry(
-                    dayEntryView.getEntry(), dragMode);
-            draggedEntry.setOffsetDuration(offsetDuration);
-
             if (!dayView.getSelections().isEmpty()) {
 
                 dayView.setDraggedEntries(dayView.getSelections().stream()
