@@ -2522,6 +2522,7 @@ public abstract class DateControl extends CalendarFXControl {
         Bindings.bindBidirectional(otherControl.entryDetailsCallbackProperty(), entryDetailsCallbackProperty());
         Bindings.bindBidirectional(otherControl.dateDetailsCallbackProperty(), dateDetailsCallbackProperty());
         Bindings.bindBidirectional(otherControl.contextMenuCallbackProperty(), contextMenuCallbackProperty());
+        Bindings.bindBidirectional(otherControl.releaseDragCallbackProperty(), releaseDragCallbackProperty());
         Bindings.bindBidirectional(otherControl.entryContextMenuCallbackProperty(), entryContextMenuCallbackProperty());
         Bindings.bindBidirectional(otherControl.calendarSourceFactoryProperty(), calendarSourceFactoryProperty());
         Bindings.bindBidirectional(otherControl.entryDetailsPopOverContentCallbackProperty(), entryDetailsPopOverContentCallbackProperty());
@@ -2573,6 +2574,7 @@ public abstract class DateControl extends CalendarFXControl {
         Bindings.unbindBidirectional(otherControl.entryDetailsCallbackProperty(), entryDetailsCallbackProperty());
         Bindings.unbindBidirectional(otherControl.dateDetailsCallbackProperty(), dateDetailsCallbackProperty());
         Bindings.unbindBidirectional(otherControl.contextMenuCallbackProperty(), contextMenuCallbackProperty());
+        Bindings.unbindBidirectional(otherControl.releaseDragCallbackProperty(), releaseDragCallbackProperty());
         Bindings.unbindBidirectional(otherControl.entryContextMenuCallbackProperty(), entryContextMenuCallbackProperty());
         Bindings.unbindBidirectional(otherControl.calendarSourceFactoryProperty(), calendarSourceFactoryProperty());
         Bindings.unbindBidirectional(otherControl.entryEditPolicyProperty(), entryEditPolicyProperty());
