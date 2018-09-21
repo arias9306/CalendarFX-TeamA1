@@ -61,6 +61,8 @@ public class DayViewEditController {
     private Duration offsetDuration;
     private Duration entryDuration;
 
+    private String disableFocusHandlingKey = "disable-focus-handling";
+    
     public DayViewEditController(DayViewBase dayView) {
         this.dayView = Objects.requireNonNull(dayView);
 
@@ -203,6 +205,8 @@ public class DayViewEditController {
             return;
         }
 
+        dayEntryView.getProperties().remove(disableFocusHandlingKey);
+
         switch (dragMode) {
         case START_AND_END_TIME:
             if (dayView.getEntryEditPolicy()
@@ -289,6 +293,8 @@ public class DayViewEditController {
             return;
         }
 
+        dayEntryView.getProperties().put(disableFocusHandlingKey, true);
+        
         /*
          * We might run in the sampler application. Then the entry view will not
          * be inside a date control.
