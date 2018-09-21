@@ -52,9 +52,20 @@ public class WeekViewSkin extends SkinBase<WeekView> {
         clip.heightProperty().bind(view.heightProperty());
         view.setClip(clip);
 
-        new DayViewEditController(view);
+        createDayViewEditController(view);
 
         getChildren().add(dayGridPane);
+    }
+
+    /**
+     * Method that allows to override the DayViewEditController.
+     * 
+     * @param view
+     *            DayViewBase.
+     * @return
+     */
+    protected DayViewEditController createDayViewEditController(WeekView view) {
+        return new DayViewEditController(view);
     }
 
     @Override
@@ -112,9 +123,6 @@ public class WeekViewSkin extends SkinBase<WeekView> {
 
             Bindings.bindBidirectional(weekDayView.startTimeProperty(), weekView.startTimeProperty());
             Bindings.bindBidirectional(weekDayView.endTimeProperty(), weekView.endTimeProperty());
-
-//            weekDayView.startTimeProperty().bind(weekView.startTimeProperty());
-//            weekDayView.endTimeProperty().bind(weekView.endTimeProperty());
 
             dayGridPane.add(weekDayView, i, 0);
 

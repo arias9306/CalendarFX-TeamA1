@@ -256,7 +256,7 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
         Entry<?> entry = getEntry();
         if (entry != null) {
             Calendar calendar = entry.getCalendar();
-            if (calendar != null) {
+            if (calendar != null && getDateControl() != null) {
                 visibleProperty().bind(Bindings.and(getDateControl().getCalendarVisibilityProperty(calendar), Bindings.not(hiddenProperty())));
             }
         }

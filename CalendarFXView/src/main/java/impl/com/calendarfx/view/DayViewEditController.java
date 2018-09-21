@@ -146,7 +146,7 @@ public class DayViewEditController {
         }
     }
 
-    private void mouseMoved(MouseEvent evt) {
+    protected void mouseMoved(MouseEvent evt) {
         if (!dragging) {
             initDragModeAndHandle(evt);
         }
@@ -174,7 +174,7 @@ public class DayViewEditController {
         }
     }
 
-    private void mousePressed(MouseEvent evt) {
+    protected void mousePressed(MouseEvent evt) {
         dragMode = null;
         handle = null;
 
@@ -281,7 +281,7 @@ public class DayViewEditController {
         }
     }
 
-    private void mouseReleased(MouseEvent evt) {
+    protected void mouseReleased(MouseEvent evt) {
         if (!evt.getButton().equals(MouseButton.PRIMARY) || dayEntryView == null
                 || dragMode == null || !dragging) {
             return;
@@ -383,7 +383,7 @@ public class DayViewEditController {
                         .equals(LocalTime.of(23, 59, 59, 999000000)));
     }
 
-    private void mouseDragged(MouseEvent evt) {
+    protected void mouseDragged(MouseEvent evt) {
         if (!evt.getButton().equals(MouseButton.PRIMARY) || dayEntryView == null
                 || dragMode == null || !dragging) {
             return;

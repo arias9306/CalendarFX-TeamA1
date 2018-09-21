@@ -119,7 +119,7 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T>
              * controller installed on the week view, not on the individual
              * days.
              */
-            new DayViewEditController(view);
+            createDayViewEditController(view);
         }
 
         setupCurrentTimeMarkerSupport();
@@ -157,6 +157,16 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T>
         view.earlyLateHoursStrategyProperty().addListener(styleLinesListener);
 
         loadData("initial data loading");
+    }
+
+    /**
+     * Method that allows to override the DayViewEditController.
+     * 
+     * @param view DayViewBase.
+     * @return
+     */
+    protected DayViewEditController createDayViewEditController(T view) {
+        return new DayViewEditController(view);
     }
 
     @Override
