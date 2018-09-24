@@ -62,7 +62,7 @@ public class DayViewEditController {
     private Duration entryDuration;
 
     private String disableFocusHandlingKey = "disable-focus-handling";
-    
+
     public DayViewEditController(DayViewBase dayView) {
         this.dayView = Objects.requireNonNull(dayView);
 
@@ -294,7 +294,7 @@ public class DayViewEditController {
         }
 
         dayEntryView.getProperties().put(disableFocusHandlingKey, true);
-        
+
         /*
          * We might run in the sampler application. Then the entry view will not
          * be inside a date control.
@@ -472,7 +472,8 @@ public class DayViewEditController {
                             .equals(entry.getId()))
                     .findFirst().orElse(null);
             if (dragEntry != null) {
-                if (dayView.getSelections().size() > 1) {
+                if (dayView.getSelections().size() > 1
+                        || draggedEntries.size() > 1) {
                     final LocalDateTime startEntry = LocalDateTime.of(startDate,
                             startTime);
                     final LocalDateTime endEntry = LocalDateTime.of(endDate,
@@ -565,7 +566,8 @@ public class DayViewEditController {
                             .equals(entry.getId()))
                     .findFirst().orElse(null);
             if (dragEntry != null) {
-                if (dayView.getSelections().size() > 1) {
+                if (dayView.getSelections().size() > 1
+                        || draggedEntries.size() > 1) {
                     final LocalDateTime startEntry = LocalDateTime.of(startDate,
                             startTime);
                     final LocalDateTime endEntry = LocalDateTime.of(endDate,
@@ -618,7 +620,8 @@ public class DayViewEditController {
                             .equals(entry.getId()))
                     .findFirst().orElse(null);
             if (dragEntry != null) {
-                if (dayView.getSelections().size() > 1) {
+                if (dayView.getSelections().size() > 1
+                        || draggedEntries.size() > 1) {
                     final LocalDateTime startEntry = LocalDateTime.of(startDate,
                             startTime);
                     final LocalDateTime endEntry = LocalDateTime.of(endDate,
