@@ -124,7 +124,7 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T>
 
         setupCurrentTimeMarkerSupport();
 
-        view.draggedEntriesProperty().get().addListener(this::addOrRemoveDraggedEntryView);
+        view.draggedEntriesProperty().addListener(this::addOrRemoveDraggedEntryView);
 
         view.showCurrentTimeMarkerProperty()
                 .addListener(it -> updateTimelineVisibility());
@@ -243,10 +243,8 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T>
             draggedEntriesView
                     .remove(draggedEntriesView.stream()
                             .filter(entry -> entry.getEntry().getId()
-                                    .equals(draggedEntry.getOriginalEntry()
-                                            .getId()))
-                            .findFirst().orElse(new DayEntryView(
-                                    draggedEntry.getOriginalEntry())));
+                                    .equals(draggedEntry.getId()))
+                            .findFirst().orElse(new DayEntryView(draggedEntry)));
         }
 
         view.requestLayout();
@@ -633,10 +631,10 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T>
                 }
 
                 if (viewEntry.getId().equals(removedEntry.getId())) {
-                    if (entry instanceof DraggedEntry) {
-                        return viewEntry.getInterval()
-                                .equals(entry.getInterval());
-                    }
+//                    if (entry instanceof DraggedEntry) {
+//                        return viewEntry.getInterval()
+//                                .equals(entry.getInterval());
+//                    }
                     return true;
                 }
             }
