@@ -371,6 +371,8 @@ public class DayViewEditController {
             return false;
         }
 
+        dayView.fireEvent(
+                new DayViewEvent(DayViewEvent.DRAGGED_CALLBACK_CALLED));
         Callback<Set<DraggedEntry>, Boolean> releaseCallback = dayView
                 .getReleaseDragCallback();
         return releaseCallback != null ? releaseCallback.call(draggedEntries)

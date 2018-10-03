@@ -92,6 +92,8 @@ public class DayViewScrollPane extends Pane {
         dayView.hourHeightCompressedProperty().addListener(it -> requestLayout());
         dayView.hoursLayoutStrategyProperty().addListener(it -> requestLayout());
         dayView.hourHeightProperty().addListener(it -> requestLayout());
+        dayView.addEventFilter(DayViewEvent.DRAGGED_CALLBACK_CALLED,
+                evt -> stopAutoScrollIfNeeded());
 
         updateVisibleTimeRange();
 
