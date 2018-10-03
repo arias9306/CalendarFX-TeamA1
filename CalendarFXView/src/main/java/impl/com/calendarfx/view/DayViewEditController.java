@@ -21,6 +21,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoField;
 import java.util.Objects;
 import java.util.Set;
@@ -332,12 +333,13 @@ public class DayViewEditController {
                 draggedEntry.getInterval().getStartDateTime());
         LocalDateTime endDateTime = grid(
                 draggedEntry.getInterval().getEndDateTime());
+        ZoneId zoneId = draggedEntry.getOriginalEntry().getZoneId();
 
         if (endDateTime.getHour() == 0 && endDateTime.getMinute() == 0) {
             endDateTime = endDateTime.minus(1,
                     ChronoField.MILLI_OF_DAY.getBaseUnit());
         }
-        return new Interval(startDateTime, endDateTime);
+        return new Interval(startDateTime, endDateTime, zoneId);
     }
 
     /**
@@ -474,6 +476,7 @@ public class DayViewEditController {
                             .equals(entry.getId()))
                     .findFirst().orElse(null);
             if (dragEntry != null) {
+                ZoneId zoneId = dragEntry.getOriginalEntry().getZoneId();
                 if (dayView.getSelections().size() > 1
                         || draggedEntries.size() > 1) {
                     final LocalDateTime startEntry = LocalDateTime.of(startDate,
@@ -488,7 +491,8 @@ public class DayViewEditController {
                         }
                     }
                 }
-                dragEntry.setInterval(startDate, startTime, endDate, endTime);
+                dragEntry.setInterval(startDate, startTime, endDate, endTime,
+                        zoneId);
             }
             requestLayout();
         }
@@ -510,6 +514,7 @@ public class DayViewEditController {
     private void generateNewInterval(DraggedEntry draggedEntry,
             DraggedEntry dragEntry, LocalDateTime startEntry,
             LocalDateTime endEntry) {
+        ZoneId zoneId = draggedEntry.getOriginalEntry().getZoneId();
         final LocalDateTime startDragEntry = dragEntry
                 .getStartAsLocalDateTime();
         final LocalDateTime endDragEntry = dragEntry.getEndAsLocalDateTime();
@@ -520,9 +525,9 @@ public class DayViewEditController {
         final LocalDateTime newEnd = draggedEntry.getEndAsLocalDateTime()
                 .minus(endDuration);
         if (newEnd.isAfter(newStart)) {
-            draggedEntry.setInterval(newStart, newEnd);
+            draggedEntry.setInterval(newStart, newEnd, zoneId);
         } else {
-            draggedEntry.setInterval(newEnd, newStart);
+            draggedEntry.setInterval(newEnd, newStart, zoneId);
         }
     }
 
@@ -568,6 +573,7 @@ public class DayViewEditController {
                             .equals(entry.getId()))
                     .findFirst().orElse(null);
             if (dragEntry != null) {
+                ZoneId zoneId = dragEntry.getOriginalEntry().getZoneId();
                 if (dayView.getSelections().size() > 1
                         || draggedEntries.size() > 1) {
                     final LocalDateTime startEntry = LocalDateTime.of(startDate,
@@ -582,7 +588,8 @@ public class DayViewEditController {
                         }
                     }
                 }
-                dragEntry.setInterval(startDate, startTime, endDate, endTime);
+                dragEntry.setInterval(startDate, startTime, endDate, endTime,
+                        zoneId);
             }
 
             requestLayout();
@@ -622,6 +629,7 @@ public class DayViewEditController {
                             .equals(entry.getId()))
                     .findFirst().orElse(null);
             if (dragEntry != null) {
+                ZoneId zoneId = dragEntry.getOriginalEntry().getZoneId();
                 if (dayView.getSelections().size() > 1
                         || draggedEntries.size() > 1) {
                     final LocalDateTime startEntry = LocalDateTime.of(startDate,
@@ -636,7 +644,8 @@ public class DayViewEditController {
                         }
                     }
                 }
-                dragEntry.setInterval(startDate, startTime, endDate, endTime);
+                dragEntry.setInterval(startDate, startTime, endDate, endTime,
+                        zoneId);
             }
 
             requestLayout();
