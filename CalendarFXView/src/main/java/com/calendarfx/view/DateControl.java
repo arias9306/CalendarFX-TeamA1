@@ -286,7 +286,7 @@ public abstract class DateControl extends CalendarFXControl {
             }
 
             Entry<Object> entry = new Entry<>(MessageFormat.format(Messages.getString("DateControl.DEFAULT_ENTRY_TITLE"), entryCounter++)); //$NON-NLS-1$
-            Interval interval = new Interval(time.toLocalDateTime(), time.toLocalDateTime().plusHours(1));
+            Interval interval = new Interval(time.toLocalDateTime(), time.toLocalDateTime().plusHours(1), time.getZone());
             entry.setInterval(interval);
 
             if (control instanceof AllDayView) {
