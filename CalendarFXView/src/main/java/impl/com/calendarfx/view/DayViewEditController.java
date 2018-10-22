@@ -326,6 +326,8 @@ public class DayViewEditController {
         dayEntryView.getProperties().put("dragged", false); //$NON-NLS-1$
         dayEntryView.getProperties().put("dragged-start", false); //$NON-NLS-1$
         dayEntryView.getProperties().put("dragged-end", false); //$NON-NLS-1$
+        dayView.fireEvent(
+                new DayViewEvent(DayViewEvent.DRAGGED_CALLBACK_CALLED));
     }
 
     private Interval validateNewInterval(DraggedEntry draggedEntry) {

@@ -369,9 +369,11 @@ public class DayViewScrollPane extends Pane {
     }
 
     private void stopAutoScrollIfNeeded() {
-        if (scrollThread != null) {
-            scrollThread.stopRunning();
-            scrollThread = null;
-        }
+        Platform.runLater(() -> {
+            if (scrollThread != null) {
+                scrollThread.stopRunning();
+                scrollThread = null;
+            }
+        });
     }
 }
