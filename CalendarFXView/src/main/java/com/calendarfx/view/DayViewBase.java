@@ -86,13 +86,18 @@ public abstract class DayViewBase extends DateControl implements ZonedDateTimePr
 
         final InvalidationListener trimListener = it -> {
             if (isTrimTimeBounds()) {
-                trimTimeBounds();
+                trimTimeBounds(LocalTime.of(8, 0), LocalTime.of(19, 0));
+            }
+
+            if (isFullHoursScale()) {
+                trimTimeBounds(LocalTime.MIN, LocalTime.MAX);
             }
         };
 
         earliestTimeUsedProperty().addListener(trimListener);
         latestTimeUsedProperty().addListener(trimListener);
         trimTimeBoundsProperty().addListener(trimListener);
+        fullHoursScaleProperty().addListener(trimListener);
     }
 
     private final DoubleProperty entryWidthPercentage = new SimpleDoubleProperty(this, "entryWidthPercentage", 100) {
@@ -515,15 +520,36 @@ public abstract class DayViewBase extends DateControl implements ZonedDateTimePr
         this.trimTimeBounds.set(trimTimeBounds);
     }
 
-    private void trimTimeBounds() {
+    /**
+     * This property is used to show all hours in the print for day and week
+     * view
+     */
+    private final BooleanProperty fullHoursScale = new SimpleBooleanProperty(
+            this, "fullHoursScale", false);
+
+    public final BooleanProperty fullHoursScaleProperty() {
+        return fullHoursScale;
+    }
+
+    public final boolean isFullHoursScale() {
+        return fullHoursScale.get();
+    }
+
+    /**
+     * Set True to show all hours in print view (Day and Week)
+     * 
+     * @param fullHoursScale
+     */
+    public final void setFullHoursScale(boolean fullHoursScale) {
+        this.fullHoursScale.set(fullHoursScale);
+    }
+
+    private void trimTimeBounds(LocalTime st, LocalTime et) {
         if (this instanceof WeekDayView) {
             return;
         }
 
         LoggingDomain.PRINTING.fine("trimming hours");
-
-        LocalTime st = LocalTime.of(8, 0);
-        LocalTime et = LocalTime.of(19, 0);
 
         LocalTime etu = getEarliestTimeUsed();
         LocalTime ltu = getLatestTimeUsed();
@@ -593,6 +619,8 @@ public abstract class DayViewBase extends DateControl implements ZonedDateTimePr
                 enableCurrentTimeMarkerProperty());
         Bindings.bindBidirectional(otherControl.trimTimeBoundsProperty(),
                 trimTimeBoundsProperty());
+        Bindings.bindBidirectional(otherControl.fullHoursScaleProperty(),
+                fullHoursScaleProperty());
     }
 
     public final void unbind(DayViewBase otherControl) {
@@ -614,6 +642,8 @@ public abstract class DayViewBase extends DateControl implements ZonedDateTimePr
                 enableCurrentTimeMarkerProperty());
         Bindings.unbindBidirectional(otherControl.trimTimeBoundsProperty(),
                 trimTimeBoundsProperty());
+        Bindings.unbindBidirectional(otherControl.fullHoursScaleProperty(),
+                fullHoursScaleProperty());
     }
 
     private static final String DAY_VIEW_BASE_CATEGORY = "Date View Base"; //$NON-NLS-1$
@@ -969,6 +999,44 @@ public abstract class DayViewBase extends DateControl implements ZonedDateTimePr
             @Override
             public boolean isEditable() {
                 return true;
+            }
+        });
+
+        items.add(new Item() {
+
+            @Override
+            public Optional<ObservableValue<?>> getObservableValue() {
+                return Optional.of(fullHoursScaleProperty());
+            }
+
+            @Override
+            public void setValue(Object value) {
+                setFullHoursScale((boolean) value);
+            }
+
+            @Override
+            public Object getValue() {
+                return isFullHoursScale();
+            }
+
+            @Override
+            public Class<?> getType() {
+                return boolean.class;
+            }
+
+            @Override
+            public String getName() {
+                return "Trim Time Bounds Print View"; //$NON-NLS-1$
+            }
+
+            @Override
+            public String getDescription() {
+                return "Adjust earliest / latest times shown only for print view"; //$NON-NLS-1$
+            }
+
+            @Override
+            public String getCategory() {
+                return DAY_VIEW_BASE_CATEGORY;
             }
         });
 
