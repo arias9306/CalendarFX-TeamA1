@@ -782,7 +782,7 @@ public class PrintablePage extends DateControl {
         newDetailedDayView.layoutProperty().bind(layoutProperty());
         newDetailedDayView.dateProperty().bind(pageStartDateProperty());
         newDetailedDayView.addEventFilter(MouseEvent.ANY, weakMouseHandler);
-        configureDetailedDayView(newDetailedDayView, true);
+        configureDetailedDayView(newDetailedDayView, true, false);
         return newDetailedDayView;
     }
 
@@ -796,9 +796,11 @@ public class PrintablePage extends DateControl {
      *            view.
      * @param trimTimeBounds
      *            define if trim or not the hours in the day view
+     * @param fullHoursScale define if show all hours in the day and 
+     *           week view only in the print view 
      */
     protected void configureDetailedDayView(DetailedDayView newDetailedDayView,
-            boolean trimTimeBounds) {
+            boolean trimTimeBounds, boolean fullHoursScale) {
         newDetailedDayView.getDayView().setStartTime(LocalTime.MIN);
         newDetailedDayView.getDayView().setEndTime(LocalTime.MAX);
         newDetailedDayView.getDayView().setEarlyLateHoursStrategy(
@@ -807,6 +809,7 @@ public class PrintablePage extends DateControl {
                 DayViewBase.HoursLayoutStrategy.FIXED_HOUR_COUNT);
         newDetailedDayView.getDayView().setVisibleHours(24);
         newDetailedDayView.getDayView().setTrimTimeBounds(trimTimeBounds);
+        newDetailedDayView.getDayView().setFullHoursScale(fullHoursScale);
     }
 
     /**
@@ -831,7 +834,7 @@ public class PrintablePage extends DateControl {
         newDetailedWeekView.setVisibleHours(24);
         newDetailedWeekView.addEventFilter(MouseEvent.ANY, weakMouseHandler);
         newDetailedWeekView.dateProperty().bind(pageStartDateProperty());
-        configureDetailedWeekView(newDetailedWeekView, true);
+        configureDetailedWeekView(newDetailedWeekView, true, false);
         return newDetailedWeekView;
     }
 
@@ -845,11 +848,15 @@ public class PrintablePage extends DateControl {
      *            view.
      * @param trimTimeBounds
      *            define if trim or not the hours in the week view
+     * @param fullHoursScale define if show all hours in the day and 
+     *           week view only in the print view 
+     * 
      */
     protected void configureDetailedWeekView(
-            DetailedWeekView newDetailedWeekView, boolean trimTimeBounds) {
+            DetailedWeekView newDetailedWeekView, boolean trimTimeBounds, boolean fullHoursScale) {
         newDetailedWeekView.getWeekView().setShowToday(false);
         newDetailedWeekView.getWeekView().setTrimTimeBounds(trimTimeBounds);
+        newDetailedWeekView.getWeekView().setFullHoursScale(fullHoursScale);
     }
 
     /**

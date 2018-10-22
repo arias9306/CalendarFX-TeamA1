@@ -184,7 +184,7 @@ public class TimeScaleViewSkin<T extends TimeScaleView>
         double prefHeight = label.prefHeight(contentWidth);
 
         double y = contentY
-                + ViewHelper.getTimeLocation(getSkinnable(), time, true);
+                + ViewHelper.getTimeLocation(getSkinnable(), time);
 
         /*
          * Min and max calculations to ensure text is completely visible at the
