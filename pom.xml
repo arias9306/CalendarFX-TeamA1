@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.calendarfx</groupId>
     <artifactId>calendar</artifactId>
-    <version>8.6.1</version>
+    <version>11.6.3</version>
     <packaging>pom</packaging>
     <name>CalendarFX</name>
     <description>The parent project for the various CalendarFX modules.
@@ -14,11 +14,13 @@
     </organization>
 
     <url>https://github.com/dlemmermann/CalendarFX</url>
+
     <licenses>
         <license>
             <name>Apache 2.0</name>
         </license>
     </licenses>
+
     <scm>
         <url>https://github.com/dlemmermann/CalendarFX</url>
     </scm>
@@ -26,10 +28,11 @@
     <developers>
         <developer>
             <name>Dirk Lemmermann</name>
-            <email>dlemmermann@gmail.com</email>
-            <organization>DLSC</organization>
+            <url>http://www.dlsc.com</url>
+            <organization>DLSC Software &amp; Consulting</organization>
         </developer>
     </developers>
+
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -60,10 +63,10 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.7.0</version>
+                <version>3.8.0</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>11</source>
+                    <target>11</target>
                 </configuration>
             </plugin>
         </plugins>
@@ -100,10 +103,9 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.10.1</version>
+                <version>3.0.1</version>
                 <configuration>
                     <windowtitle>CalendarFX API</windowtitle>
-                    <aggregate>true</aggregate>
                     <show>protected</show>
                     <failOnError>false</failOnError>
                 </configuration>

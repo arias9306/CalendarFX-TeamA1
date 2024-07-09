@@ -23,7 +23,7 @@
     <parent>
         <groupId>com.calendarfx</groupId>
         <artifactId>calendar</artifactId>
-        <version>8.6.1</version>
+        <version>11.6.3</version>
     </parent>
 
     <repositories>
@@ -47,27 +47,39 @@
     <dependencies>
 
         <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>12.0.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>12.0.1</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.calendarfx</groupId>
             <artifactId>recurrence</artifactId>
-            <version>8.6.1</version>
+            <version>11.6.3</version>
         </dependency>
 
         <dependency>
             <groupId>org.controlsfx</groupId>
             <artifactId>controlsfx</artifactId>
-            <version>8.40.13</version>
+            <version>11.0.0</version>
         </dependency>
 
         <dependency>
             <groupId>de.jensd</groupId>
             <artifactId>fontawesomefx-commons</artifactId>
-            <version>8.13</version>
+            <version>9.1.2</version>
         </dependency>
 
         <dependency>
             <groupId>de.jensd</groupId>
             <artifactId>fontawesomefx-fontawesome</artifactId>
-            <version>4.7.0-1</version>
+            <version>4.7.0-9.1.2</version>
         </dependency>
 
     </dependencies>
@@ -120,12 +132,60 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.0.0-M1</version>
+                <version>3.1.1</version>
                 <configuration>
                     <failOnError>false</failOnError>
                     <force>true</force>
+                    <windowtitle>CalendarFX API</windowtitle>
+                    <additionalJOptions>
+                        <additionalJOption>-J-Djavafx.javadoc=true</additionalJOption>
+                        <additionalJOption>-html5</additionalJOption>
+                    </additionalJOptions>
+                    <docfilessubdirs>true</docfilessubdirs>
+                    <tags>
+                        <tag>
+                            <name>defaultValue</name>
+                            <placement>a</placement>
+                            <head>Default Value:</head>
+                        </tag>
+                        <tag>
+                            <name>apiNote</name>
+                            <placement>a</placement>
+                            <head>API Note:</head>
+                        </tag>
+                        <tag>
+                            <name>implSpec</name>
+                            <placement>a</placement>
+                            <head>Implementation Requirements:</head>
+                        </tag>
+                        <tag>
+                            <name>implNote</name>
+                            <placement>a</placement>
+                            <head>Implementation Note:</head>
+                        </tag>
+                    </tags>
+                    <sourceFileExcludes>
+                        <sourceFileExclude>**\/\module-info.java</sourceFileExclude>
+                    </sourceFileExcludes>
                 </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.ow2.asm</groupId>
+                        <artifactId>asm</artifactId>
+                        <version>7.0</version>
+                    </dependency>
+                </dependencies>
                 <executions>
+                    <execution>
+                        <id>make-docs
+
+                        </id> <!-- this is used for inheritance merges -->
+                        <phase>package
+                        </phase> <!-- bind to the packaging phase -->
+                        <goals>
+                            <goal>aggregate</goal>
+                        </goals>
+                    </execution>
                     <execution>
                         <id>attach-javadocs</id>
                         <goals>
