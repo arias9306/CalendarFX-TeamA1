@@ -5,3 +5,5 @@
 *.prefs
 CalendarFXApp/.classpath
 *.classpath
+
+.DS_Store
