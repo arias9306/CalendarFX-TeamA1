@@ -16,6 +16,18 @@
 
 package impl.com.calendarfx.view;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.stream.Collectors;
+
 import com.calendarfx.model.Calendar;
 import com.calendarfx.model.CalendarEvent;
 import com.calendarfx.model.CalendarSource;
@@ -26,11 +38,13 @@ import com.calendarfx.view.DayView;
 import com.calendarfx.view.DraggedEntry;
 import com.calendarfx.view.EntryViewBase;
 import com.calendarfx.view.EntryViewBase.Position;
+
 import impl.com.calendarfx.view.util.Placement;
 import impl.com.calendarfx.view.util.Resolver;
 import javafx.animation.FadeTransition;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
+import javafx.collections.SetChangeListener.Change;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.layout.Region;
@@ -39,18 +53,9 @@ import javafx.scene.shape.Line;
 import javafx.util.Callback;
 import javafx.util.Duration;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.stream.Collectors;
-
 @SuppressWarnings("javadoc")
-public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implements LoadDataSettingsProvider {
+public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T>
+        implements LoadDataSettingsProvider {
 
     private List<Line> lines = new ArrayList<>();
 
@@ -60,7 +65,7 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
 
     private Line currentTimeLine;
 
-    private DayEntryView draggedEntryView;
+    private Set<DayEntryView> draggedEntriesView = new HashSet<>();
 
     private Region earlyHoursRegion;
 
@@ -95,7 +100,8 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
         currentTimeCircle.setManaged(false);
         currentTimeCircle.setMouseTransparent(true);
         currentTimeCircle.setOpacity(0);
-        currentTimeCircle.visibleProperty().bind(view.enableCurrentTimeMarkerProperty());
+        currentTimeCircle.visibleProperty()
+                .bind(view.enableCurrentTimeMarkerProperty());
         getChildren().add(currentTimeCircle);
 
         currentTimeLine = new Line();
@@ -103,23 +109,29 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
         currentTimeLine.setManaged(false);
         currentTimeLine.setMouseTransparent(true);
         currentTimeLine.setOpacity(0);
-        currentTimeLine.visibleProperty().bind(view.enableCurrentTimeMarkerProperty());
+        currentTimeLine.visibleProperty()
+                .bind(view.enableCurrentTimeMarkerProperty());
         getChildren().add(currentTimeLine);
 
         if (!(this instanceof WeekDayViewSkin)) {
             /*
-             * Dragging inside week day views will be handled by a drag controller
-             * installed on the week view, not on the individual days.
+             * Dragging inside week day views will be handled by a drag
+             * controller installed on the week view, not on the individual
+             * days.
              */
             new DayViewEditController(view);
         }
 
         setupCurrentTimeMarkerSupport();
 
-        view.draggedEntryProperty().addListener(it -> addOrRemoveDraggedEntryView());
+        view.draggedEntriesProperty().get().addListener(
+                (Change<? extends DraggedEntry> change) -> addOrRemoveDraggedEntryView(
+                        change));
 
-        view.showCurrentTimeMarkerProperty().addListener(it -> updateTimelineVisibility());
-        view.showCurrentTimeTodayMarkerProperty().addListener(it -> updateTimelineVisibility());
+        view.showCurrentTimeMarkerProperty()
+                .addListener(it -> updateTimelineVisibility());
+        view.showCurrentTimeTodayMarkerProperty()
+                .addListener(it -> updateTimelineVisibility());
 
         view.layoutProperty().addListener(it -> view.requestLayout());
 
@@ -127,13 +139,17 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
         updateTimelineVisibility();
 
         view.dateProperty().addListener(it -> {
-            if (displayedDate == null || !displayedDate.equals(view.getDate())) {
+            if (displayedDate == null
+                    || !displayedDate.equals(view.getDate())) {
                 loadData("date changed");
             }
         });
 
-        view.suspendUpdatesProperty().addListener(evt -> loadData("suspend updates was set to false"));
-        view.getCalendars().addListener((javafx.beans.Observable obs) -> loadData("list of calendars changed"));
+        view.suspendUpdatesProperty().addListener(
+                evt -> loadData("suspend updates was set to false"));
+        view.getCalendars()
+                .addListener((javafx.beans.Observable obs) -> loadData(
+                        "list of calendars changed"));
 
         updateLineStyling();
 
@@ -157,12 +173,15 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
 
     private void updateTimelineVisibility() {
         double lineOpacity = getSkinnable().isShowCurrentTimeMarker() ? 1 : 0;
-        FadeTransition lineTransition = new FadeTransition(Duration.millis(600), currentTimeLine);
+        FadeTransition lineTransition = new FadeTransition(Duration.millis(600),
+                currentTimeLine);
         lineTransition.setToValue(lineOpacity);
         lineTransition.play();
 
-        double circleOpacity = getSkinnable().isShowCurrentTimeTodayMarker() ? 1 : 0;
-        FadeTransition circleTransition = new FadeTransition(Duration.millis(600), currentTimeCircle);
+        double circleOpacity = getSkinnable().isShowCurrentTimeTodayMarker() ? 1
+                : 0;
+        FadeTransition circleTransition = new FadeTransition(
+                Duration.millis(600), currentTimeCircle);
         circleTransition.setToValue(circleOpacity);
         circleTransition.play();
     }
@@ -190,24 +209,36 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
         return isShowingTimeMarker();
     }
 
-    private InvalidationListener layoutListener = it -> getSkinnable().requestLayout();
+    private InvalidationListener layoutListener = it -> getSkinnable()
+            .requestLayout();
 
-    private WeakInvalidationListener weakLayoutListener = new WeakInvalidationListener(layoutListener);
+    private WeakInvalidationListener weakLayoutListener = new WeakInvalidationListener(
+            layoutListener);
 
-    private void addOrRemoveDraggedEntryView() {
+    private void addOrRemoveDraggedEntryView(
+            Change<? extends DraggedEntry> change) {
         DayView view = getSkinnable();
-        DraggedEntry draggedEntry = view.getDraggedEntry();
-        if (draggedEntry != null) {
-            draggedEntryView = doAddEntryView(draggedEntry);
-            draggedEntryView.toFront();
-            draggedEntryView.setMouseTransparent(true);
-            draggedEntryView.getProperties().put("selected", true); //$NON-NLS-1$
+        final boolean wasAdded = change.wasAdded();
+        DraggedEntry draggedEntry = wasAdded ? change.getElementAdded()
+                : change.getElementRemoved();
+        if (wasAdded) {
+            DayEntryView addDraggedEntry = doAddEntryView(draggedEntry);
+            addDraggedEntry.toFront();
+            addDraggedEntry.setMouseTransparent(true);
+            addDraggedEntry.getProperties().put("selected", true); //$NON-NLS-1$
             draggedEntry.intervalProperty().addListener(weakLayoutListener);
-        } else {
-            if (draggedEntryView != null) {
-                removeEntryView(draggedEntryView.getEntry());
-                draggedEntryView = null;
-            }
+            draggedEntriesView.add(addDraggedEntry);
+        }
+        if (!wasAdded && draggedEntry != null && draggedEntriesView != null
+                && !draggedEntriesView.isEmpty()) {
+            removeEntryView(draggedEntry);
+            draggedEntriesView
+                    .remove(draggedEntriesView.stream()
+                            .filter(entry -> entry.getEntry().getId()
+                                    .equals(draggedEntry.getOriginalEntry()
+                                            .getId()))
+                            .findFirst().orElse(new DayEntryView(
+                                    draggedEntry.getOriginalEntry())));
         }
 
         view.requestLayout();
@@ -270,37 +301,39 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
             }
 
             switch (dayView.getEarlyLateHoursStrategy()) {
-                case HIDE:
-                    /*
-                     * We do not show ... a) lines before the start time and after
-                     * the end time b) lines directly on the start time or end time
-                     * because they make the UI look messy
-                     */
-                    if (time.isBefore(startTime) || time.equals(startTime) || time.isAfter(endTime) || time.equals(endTime)) {
-                        line.setVisible(false);
-                    } else {
-                        line.setVisible(true);
-                    }
-                    break;
-                case SHOW:
+            case HIDE:
+                /*
+                 * We do not show ... a) lines before the start time and after
+                 * the end time b) lines directly on the start time or end time
+                 * because they make the UI look messy
+                 */
+                if (time.isBefore(startTime) || time.equals(startTime)
+                        || time.isAfter(endTime) || time.equals(endTime)) {
+                    line.setVisible(false);
+                } else {
                     line.setVisible(true);
-                    break;
-                case SHOW_COMPRESSED:
-                    if (halfHourLine) {
-                        line.setVisible(false);
-                    } else {
-                        line.setVisible(true);
-                    }
-                    break;
-                default:
-                    break;
+                }
+                break;
+            case SHOW:
+                line.setVisible(true);
+                break;
+            case SHOW_COMPRESSED:
+                if (halfHourLine) {
+                    line.setVisible(false);
+                } else {
+                    line.setVisible(true);
+                }
+                break;
+            default:
+                break;
 
             }
         }
     }
 
     @Override
-    protected void layoutChildren(double contentX, double contentY, double contentWidth, double contentHeight) {
+    protected void layoutChildren(double contentX, double contentY,
+            double contentWidth, double contentHeight) {
         super.layoutChildren(contentX, contentY, contentWidth, contentHeight);
 
         int lineCount = lines.size();
@@ -318,8 +351,12 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
         double earlyHoursY = ViewHelper.getTimeLocation(dayView, startTime);
         double lateHoursY = ViewHelper.getTimeLocation(dayView, endTime);
 
-        earlyHoursRegion.resizeRelocate(snapPosition(contentX), snapPosition(contentY), snapSize(contentWidth), snapSize(earlyHoursY));
-        lateHoursRegion.resizeRelocate(snapPosition(contentX), snapPosition(lateHoursY), snapSize(contentWidth), snapSize(contentHeight - lateHoursY));
+        earlyHoursRegion.resizeRelocate(snapPosition(contentX),
+                snapPosition(contentY), snapSize(contentWidth),
+                snapSize(earlyHoursY));
+        lateHoursRegion.resizeRelocate(snapPosition(contentX),
+                snapPosition(lateHoursY), snapSize(contentWidth),
+                snapSize(contentHeight - lateHoursY));
 
         for (int i = 0; i < lineCount; i++) {
             Line line = lines.get(i);
@@ -334,7 +371,8 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
 
             LocalTime time = LocalTime.of(hour, minute);
 
-            double yy = snapPosition(contentY + ViewHelper.getTimeLocation(dayView, time));
+            double yy = snapPosition(
+                    contentY + ViewHelper.getTimeLocation(dayView, time));
 
             line.setStartX(snapPosition(contentX + 4));
             line.setStartY(yy);
@@ -343,71 +381,91 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
         }
 
         // the dragged entry view
-        if (draggedEntryView != null) {
-            boolean showing = isRelevant(draggedEntryView.getEntry());
-            draggedEntryView.setVisible(showing);
+        if (draggedEntriesView != null && !draggedEntriesView.isEmpty()) {
+            for (DayEntryView draggedEntryView : draggedEntriesView) {
+                boolean showing = isRelevant(draggedEntryView.getEntry());
+                draggedEntryView.setVisible(showing);
+            }
         }
 
         switch (dayView.getLayout()) {
-            case STANDARD:
-                layoutStandard(dayView, contentX, contentY, contentWidth, contentHeight);
-                break;
-            case SWIMLANE:
-                layoutSwimlane(dayView, contentX, contentY, contentWidth, contentHeight);
-                break;
-            default:
-                throw new IllegalArgumentException("unknown layout: " + dayView.getLayout()); //$NON-NLS-1$
+        case STANDARD:
+            layoutStandard(dayView, contentX, contentY, contentWidth,
+                    contentHeight);
+            break;
+        case SWIMLANE:
+            layoutSwimlane(dayView, contentX, contentY, contentWidth,
+                    contentHeight);
+            break;
+        default:
+            throw new IllegalArgumentException(
+                    "unknown layout: " + dayView.getLayout()); //$NON-NLS-1$
         }
 
         LocalTime time = dayView.getTime();
-        double y = snapPosition(contentY + ViewHelper.getTimeLocation(dayView, time));
+        double y = snapPosition(
+                contentY + ViewHelper.getTimeLocation(dayView, time));
 
         currentTimeLine.setStartX(snapPosition(contentX));
         currentTimeLine.setStartY(snapPosition(y));
         currentTimeLine.setEndX(snapPosition(contentX + contentWidth));
         currentTimeLine.setEndY(snapPosition(y));
         currentTimeLine.toFront();
-        currentTimeCircle.setCenterX(snapPosition(contentX + currentTimeCircle.getRadius() + 4));
+        currentTimeCircle.setCenterX(
+                snapPosition(contentX + currentTimeCircle.getRadius() + 4));
         currentTimeCircle.setCenterY(y);
         currentTimeCircle.toFront();
     }
 
-    private void layoutStandard(DayView dayView, double contentX, double contentY, double contentWidth, double contentHeight) {
-        List<DayEntryView> entryViews = getChildren().stream().filter(node -> node instanceof DayEntryView).map(node -> (DayEntryView) node).collect(Collectors.toList());
-        layoutEntryViews(entryViews, dayView, contentX, contentY, contentWidth, contentHeight);
+    private void layoutStandard(DayView dayView, double contentX,
+            double contentY, double contentWidth, double contentHeight) {
+        List<DayEntryView> entryViews = getChildren().stream()
+                .filter(node -> node instanceof DayEntryView)
+                .map(node -> (DayEntryView) node).collect(Collectors.toList());
+        layoutEntryViews(entryViews, dayView, contentX, contentY, contentWidth,
+                contentHeight);
     }
 
-    private void layoutSwimlane(DayView dayView, double contentX, double contentY, double contentWidth, double contentHeight) {
-        List<Calendar> visibleCalendars = dayView.getCalendars().filtered(c -> getSkinnable().isCalendarVisible(c));
+    private void layoutSwimlane(DayView dayView, double contentX,
+            double contentY, double contentWidth, double contentHeight) {
+        List<Calendar> visibleCalendars = dayView.getCalendars()
+                .filtered(c -> getSkinnable().isCalendarVisible(c));
 
         double x = contentX;
         double w = contentWidth / (visibleCalendars.size());
 
         for (Calendar calendar : visibleCalendars) {
 
-            List<DayEntryView> entryViews = getChildren().stream().filter(node -> node instanceof DayEntryView).map(node -> (DayEntryView) node).filter(view -> {
-                Calendar cal;
-                Entry<?> entry = view.getEntry();
-                if (entry instanceof DraggedEntry) {
-                    DraggedEntry draggedEntry = (DraggedEntry) view.getEntry();
-                    cal = draggedEntry.getOriginalCalendar();
-                } else {
-                    cal = entry.getCalendar();
-                }
-                return cal != null && cal.equals(calendar);
-            }).collect(Collectors.toList());
+            List<DayEntryView> entryViews = getChildren().stream()
+                    .filter(node -> node instanceof DayEntryView)
+                    .map(node -> (DayEntryView) node).filter(view -> {
+                        Calendar cal;
+                        Entry<?> entry = view.getEntry();
+                        if (entry instanceof DraggedEntry) {
+                            DraggedEntry draggedEntry = (DraggedEntry) view
+                                    .getEntry();
+                            cal = draggedEntry.getOriginalCalendar();
+                        } else {
+                            cal = entry.getCalendar();
+                        }
+                        return cal != null && cal.equals(calendar);
+                    }).collect(Collectors.toList());
 
-            layoutEntryViews(entryViews, dayView, x, contentY, w, contentHeight);
+            layoutEntryViews(entryViews, dayView, x, contentY, w,
+                    contentHeight);
             x += w;
 
         }
     }
 
-    private void layoutEntryViews(List<DayEntryView> entryViews, DayView dayView, double contentX, double contentY, double contentWidth, double contentHeight) {
+    private void layoutEntryViews(List<DayEntryView> entryViews,
+            DayView dayView, double contentX, double contentY,
+            double contentWidth, double contentHeight) {
         List<Placement> placements = Resolver.resolve(entryViews);
 
         if (placements != null) {
-            contentWidth = contentWidth * dayView.getEntryWidthPercentage() / 100d;
+            contentWidth = contentWidth * dayView.getEntryWidthPercentage()
+                    / 100d;
 
             for (Placement placement : placements) {
                 EntryViewBase<?> view = placement.getEntryView();
@@ -418,8 +476,10 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
                 LocalTime viewStartTime = entry.getStartTime();
                 LocalTime viewEndTime = entry.getEndTime();
 
-                double y1 = ViewHelper.getTimeLocation(dayView, entry.getStartTime());
-                double y2 = ViewHelper.getTimeLocation(dayView, entry.getEndTime());
+                double y1 = ViewHelper.getTimeLocation(dayView,
+                        entry.getStartTime());
+                double y2 = ViewHelper.getTimeLocation(dayView,
+                        entry.getEndTime());
 
                 boolean startsBefore = false;
                 boolean endsAfter = false;
@@ -463,7 +523,9 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
                 /*
                  * -2 on height to always have a gap between entries
                  */
-                view.resizeRelocate(snapPosition(x), snapPosition(y1), snapSize(columnWidth), snapSize(Math.max(minHeight, y2 - y1 - 2)));
+                view.resizeRelocate(snapPosition(x), snapPosition(y1),
+                        snapSize(columnWidth),
+                        snapSize(Math.max(minHeight, y2 - y1 - 2)));
             }
         }
     }
@@ -563,6 +625,10 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
                 }
 
                 if (viewEntry.getId().equals(removedEntry.getId())) {
+                    if (entry instanceof DraggedEntry) {
+                        return viewEntry.getInterval()
+                                .equals(entry.getInterval());
+                    }
                     return true;
                 }
             }
@@ -570,8 +636,10 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
             return false;
         });
 
-        if (removed && !(entry instanceof DraggedEntry) && LoggingDomain.VIEW.isLoggable(Level.FINE)) {
-            LoggingDomain.VIEW.fine("successfully removed the entry view of entry " + entry);
+        if (removed && !(entry instanceof DraggedEntry)
+                && LoggingDomain.VIEW.isLoggable(Level.FINE)) {
+            LoggingDomain.VIEW.fine(
+                    "successfully removed the entry view of entry " + entry);
         }
 
         return removed;
@@ -581,7 +649,8 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
         if (entry.isRecurring()) {
             Calendar calendar = entry.getCalendar();
             LocalDate date = getSkinnable().getDate();
-            final Map<LocalDate, List<Entry<?>>> entries = calendar.findEntries(date, date, getZoneId());
+            final Map<LocalDate, List<Entry<?>>> entries = calendar
+                    .findEntries(date, date, getZoneId());
             List<Entry<?>> entriesOnDate = entries.get(date);
             if (entriesOnDate != null && !entriesOnDate.isEmpty()) {
                 doAddEntryView(entriesOnDate.get(0));
@@ -592,7 +661,8 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
     }
 
     private DayEntryView doAddEntryView(Entry<?> entry) {
-        Callback<Entry<?>, DayEntryView> factory = getSkinnable().getEntryViewFactory();
+        Callback<Entry<?>, DayEntryView> factory = getSkinnable()
+                .getEntryViewFactory();
         DayEntryView view = factory.call(entry);
         view.getProperties().put("control", getSkinnable()); //$NON-NLS-1$
         view.setManaged(false);
@@ -601,8 +671,10 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
 
         getChildren().add(index, view);
 
-        if (!(entry instanceof DraggedEntry) && LoggingDomain.VIEW.isLoggable(Level.FINE)) {
-            LoggingDomain.VIEW.fine("added entry view " + entry.getTitle() + ", day = " + getSkinnable().getDate());
+        if (!(entry instanceof DraggedEntry)
+                && LoggingDomain.VIEW.isLoggable(Level.FINE)) {
+            LoggingDomain.VIEW.fine("added entry view " + entry.getTitle()
+                    + ", day = " + getSkinnable().getDate());
         }
 
         return view;
@@ -620,7 +692,8 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
             if (node instanceof DayEntryView) {
                 DayEntryView view = (DayEntryView) node;
                 Entry<?> viewEntry = view.getEntry();
-                if (viewEntry.getStartAsZonedDateTime().isAfter(entry.getStartAsZonedDateTime())) {
+                if (viewEntry.getStartAsZonedDateTime()
+                        .isAfter(entry.getStartAsZonedDateTime())) {
                     return i;
                 }
             }
@@ -647,7 +720,8 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
             for (Entry<?> entry : entryList) {
                 doAddEntryView(entry);
 
-                if (earliest == null || entry.getStartTime().isBefore(earliest)) {
+                if (earliest == null
+                        || entry.getStartTime().isBefore(earliest)) {
                     earliest = entry.getStartTime();
                 }
 
@@ -670,7 +744,12 @@ public class DayViewSkin<T extends DayView> extends DayViewBaseSkin<T> implement
 
         getSkinnable().requestLayout();
 
-        LoggingDomain.VIEW.fine("updating entries in day view " + getSkinnable().getDate() + ": reason = " + reason + ", entry count: " + getChildren().stream().filter(child -> child instanceof DayEntryView).count());
+        LoggingDomain.VIEW
+                .fine("updating entries in day view " + getSkinnable().getDate()
+                        + ": reason = " + reason + ", entry count: "
+                        + getChildren().stream()
+                                .filter(child -> child instanceof DayEntryView)
+                                .count());
     }
 
     @Override
