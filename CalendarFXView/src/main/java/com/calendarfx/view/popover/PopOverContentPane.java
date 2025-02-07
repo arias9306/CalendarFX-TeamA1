@@ -34,18 +34,17 @@ public class PopOverContentPane extends BorderPane {
         topProperty().bind(headerProperty());
 
         Accordion accordion = new Accordion();
-        accordion.getStyleClass().add("popover-accordion"); //$NON-NLS-1$
+        accordion.getStyleClass().add("popover-accordion");
         setCenter(accordion);
 
         Bindings.bindContentBidirectional(getPanes(), accordion.getPanes());
-        Bindings.bindBidirectional(expandedPaneProperty(),
-                accordion.expandedPaneProperty());
+        Bindings.bindBidirectional(expandedPaneProperty(), accordion.expandedPaneProperty());
 
         bottomProperty().bind(footerProperty());
 
         headerProperty().addListener((value, oldNode, newNode) -> {
             if (newNode != null) {
-                String style = "popover-header"; //$NON-NLS-1$
+                String style = "popover-header";
                 if (!newNode.getStyleClass().contains(style)) {
                     newNode.getStyleClass().add(style);
                 }
@@ -54,7 +53,7 @@ public class PopOverContentPane extends BorderPane {
 
         footerProperty().addListener((value, oldNode, newNode) -> {
             if (newNode != null) {
-                String style = "popover-footer"; //$NON-NLS-1$
+                String style = "popover-footer";
                 if (!newNode.getStyleClass().contains(style)) {
                     newNode.getStyleClass().add(style);
                 }
@@ -64,8 +63,7 @@ public class PopOverContentPane extends BorderPane {
 
     // header support
 
-    private final ObjectProperty<Node> header = new SimpleObjectProperty<>(
-            this, "header"); //$NON-NLS-1$
+    private final ObjectProperty<Node> header = new SimpleObjectProperty<>(this, "header");
 
     public final ObjectProperty<Node> headerProperty() {
         return header;
@@ -81,8 +79,7 @@ public class PopOverContentPane extends BorderPane {
 
     // footer support
 
-    private final ObjectProperty<Node> footer = new SimpleObjectProperty<>(
-            this, "footer"); //$NON-NLS-1$
+    private final ObjectProperty<Node> footer = new SimpleObjectProperty<>(this, "footer");
 
     public final ObjectProperty<Node> footerProperty() {
         return footer;
@@ -98,8 +95,7 @@ public class PopOverContentPane extends BorderPane {
 
     // panes
 
-    private final ObservableList<TitledPane> panes = FXCollections
-            .observableArrayList();
+    private final ObservableList<TitledPane> panes = FXCollections.observableArrayList();
 
     public final ObservableList<TitledPane> getPanes() {
         return panes;
@@ -107,8 +103,7 @@ public class PopOverContentPane extends BorderPane {
 
     // Expanded pane support
 
-    private final ObjectProperty<TitledPane> expandedPane = new SimpleObjectProperty<>(
-            this, "expandedPane"); //$NON-NLS-1$
+    private final ObjectProperty<TitledPane> expandedPane = new SimpleObjectProperty<>(this, "expandedPane");
 
     public final ObjectProperty<TitledPane> expandedPaneProperty() {
         return expandedPane;

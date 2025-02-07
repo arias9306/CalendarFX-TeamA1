@@ -17,6 +17,7 @@
 package com.calendarfx.model;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -40,13 +41,13 @@ public final class Interval {
 
     private static final ZoneId defaultZoneId = ZoneId.systemDefault();
 
-    private LocalDate startDate;
+    private final LocalDate startDate;
 
-    private LocalDate endDate;
+    private final LocalDate endDate;
 
-    private LocalTime startTime;
+    private final LocalTime startTime;
 
-    private LocalTime endTime;
+    private final LocalTime endTime;
 
     private ZonedDateTime zonedStartDateTime;
 
@@ -56,7 +57,7 @@ public final class Interval {
 
     private LocalDateTime endDateTime;
 
-    private ZoneId zoneId;
+    private final ZoneId zoneId;
 
     private long startMillis = Long.MIN_VALUE;
 
@@ -128,6 +129,17 @@ public final class Interval {
      */
     public Interval(LocalDateTime startDateTime, LocalDateTime endDateTime, ZoneId zoneId) {
         this(startDateTime.toLocalDate(), startDateTime.toLocalTime(), endDateTime.toLocalDate(), endDateTime.toLocalTime(), zoneId);
+    }
+
+    /**
+     * Constructs a new time interval with the given start and end times and time zone.
+     *
+     * @param startTime the start time
+     * @param endTime   the end time
+     * @param zoneId    the time zone
+     */
+    public Interval(Instant startTime, Instant endTime, ZoneId zoneId) {
+        this(ZonedDateTime.ofInstant(startTime, zoneId), ZonedDateTime.ofInstant(endTime, zoneId));
     }
 
     /**
@@ -394,6 +406,19 @@ public final class Interval {
     }
 
     /**
+     * Returns a new interval based on this interval but with a different duration. The duration
+     * will change the end time and / or the end date.
+     *
+     * @param duration the new duration
+     * @return a new interval
+     */
+    public Interval withDuration(Duration duration) {
+        requireNonNull(duration);
+        ZonedDateTime zonedDateTime = ZonedDateTime.of(getStartDate(), getStartTime(), getZoneId()).plus(duration);
+        return new Interval(startDate, startTime, zonedDateTime.toLocalDate(), zonedDateTime.toLocalTime(), getZoneId());
+    }
+
+    /**
      * Utility method to get the local start date time. This method combines the
      * start date and the start time to create a date time object.
      *
@@ -476,17 +501,14 @@ public final class Interval {
         } else if (!startTime.equals(other.startTime))
             return false;
         if (zoneId == null) {
-            if (other.zoneId != null)
-                return false;
-        } else if (!zoneId.equals(other.zoneId))
-            return false;
-        return true;
+            return other.zoneId == null;
+        } else return zoneId.equals(other.zoneId);
     }
 
     @Override
     public String toString() {
-        return "Interval [startDate=" + startDate + ", endDate=" + endDate //$NON-NLS-1$ //$NON-NLS-2$
-                + ", startTime=" + startTime + ", endTime=" + endTime //$NON-NLS-1$ //$NON-NLS-2$
-                + ", zoneId=" + zoneId + "]"; //$NON-NLS-1$ //$NON-NLS-2$
+        return "Interval [startDate=" + startDate + ", endDate=" + endDate
+                + ", startTime=" + startTime + ", endTime=" + endTime
+                + ", zoneId=" + zoneId + "]";
     }
 }

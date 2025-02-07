@@ -35,7 +35,7 @@ import java.util.concurrent.Executors;
 
 /**
  * Executor class that allows to have some background tasks executed.
- * <p>
+ *
  * Created by gdiaz on 22/02/2017.
  */
 public final class GoogleTaskExecutor {
@@ -77,16 +77,16 @@ public final class GoogleTaskExecutor {
 
     private final ReadOnlyDoubleWrapper progress = new ReadOnlyDoubleWrapper(this, "progress", 0);
 
-    public final ReadOnlyDoubleProperty progressProperty() {
+    public ReadOnlyDoubleProperty progressProperty() {
         return progress.getReadOnlyProperty();
     }
 
-    public final void execute(GoogleTask<?> task) {
+    public void execute(GoogleTask<?> task) {
         updatePendingTasks(task);
         executor.submit(task);
     }
 
-    public final void executeImmediate(GoogleTask<?> task) {
+    public void executeImmediate(GoogleTask<?> task) {
         updatePendingTasks(task);
         task.run();
     }

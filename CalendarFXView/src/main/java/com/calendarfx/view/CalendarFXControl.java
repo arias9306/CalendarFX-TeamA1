@@ -38,8 +38,7 @@ public abstract class CalendarFXControl extends Control {
     @Override
     public final String getUserAgentStylesheet() {
         if (stylesheet == null) {
-            stylesheet = CalendarFXControl.class.getResource("calendar.css") //$NON-NLS-1$
-                    .toExternalForm();
+            stylesheet = CalendarFXControl.class.getResource("calendar.css").toExternalForm();
         }
         return stylesheet;
     }
@@ -53,5 +52,4 @@ public abstract class CalendarFXControl extends Control {
     public ObservableList<Item> getPropertySheetItems() {
         return FXCollections.observableArrayList();
     }
-
 }

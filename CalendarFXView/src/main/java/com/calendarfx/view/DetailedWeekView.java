@@ -39,9 +39,9 @@ import java.util.Optional;
  * larger sub controls: a week view, an all day view, a calendar header view, a
  * week day header view, and a time scale view. The image below shows the appearance
  * of this view.
- * <p/>
- * <center><img src="doc-files/detailed-week-view.png"></center>
- * <p/>
+ *
+ * <img src="doc-files/detailed-week-view.png" alt="Detailed Week View">
+ *
  * @see WeekView
  */
 public class DetailedWeekView extends DayViewBase {
@@ -73,18 +73,22 @@ public class DetailedWeekView extends DayViewBase {
     public DetailedWeekView(int numberOfDays) {
         setNumberOfDays(numberOfDays);
 
+
         getStyleClass().add(DEFAULT_STYLE_CLASS);
 
         calendarHeaderView = new CalendarHeaderView();
-        calendarHeaderView.numberOfDaysProperty().bind(numberOfDaysProperty());
+        calendarHeaderView.numberOfDaysProperty().bindBidirectional(numberOfDaysProperty());
         calendarHeaderView.bind(this);
 
         weekDayHeaderView = new WeekDayHeaderView();
+        weekDayHeaderView.showTodayProperty().bindBidirectional(showTodayProperty());
+
         bind(weekDayHeaderView, true);
         Bindings.bindBidirectional(weekDayHeaderView.numberOfDaysProperty(), numberOfDaysProperty());
         Bindings.bindBidirectional(weekDayHeaderView.adjustToFirstDayOfWeekProperty(), adjustToFirstDayOfWeekProperty());
 
         allDayView = new AllDayView(getNumberOfDays());
+
         bind(allDayView, true);
         Bindings.bindBidirectional(allDayView.numberOfDaysProperty(), numberOfDaysProperty());
         Bindings.bindBidirectional(allDayView.adjustToFirstDayOfWeekProperty(), adjustToFirstDayOfWeekProperty());
@@ -157,7 +161,7 @@ public class DetailedWeekView extends DayViewBase {
         return weekView;
     }
 
-    private final IntegerProperty numberOfDays = new SimpleIntegerProperty(this, "numberOfDays", 7); //$NON-NLS-1$
+    private final IntegerProperty numberOfDays = new SimpleIntegerProperty(this, "numberOfDays", 7);
 
     /**
      * Stores the number of days that will be shown by this view. This value
@@ -186,14 +190,14 @@ public class DetailedWeekView extends DayViewBase {
      */
     public final void setNumberOfDays(int number) {
         if (number < 1) {
-            throw new IllegalArgumentException("invalid number of days, must be larger than 0 but was " //$NON-NLS-1$
+            throw new IllegalArgumentException("invalid number of days, must be larger than 0 but was "
                     + number);
         }
 
         numberOfDaysProperty().set(number);
     }
 
-    private final BooleanProperty adjustToFirstDayOfWeek = new SimpleBooleanProperty(this, "adjustToFirstDayOfWeek", true); //$NON-NLS-1$
+    private final BooleanProperty adjustToFirstDayOfWeek = new SimpleBooleanProperty(this, "adjustToFirstDayOfWeek", true);
 
     /**
      * A flag used to indicate that the view should always show the first day of
@@ -251,19 +255,19 @@ public class DetailedWeekView extends DayViewBase {
     /**
      * Sets the value of {@link #showAllDayViewProperty()}.
      *
-     * @param show if true the the all day view will be visible
+     * @param show if true the all day view will be visible
      */
     public final void setShowAllDayView(boolean show) {
         showAllDayViewProperty().set(show);
     }
 
-    // time scale support
+    // timescale support
 
     private final BooleanProperty showTimeScaleView = new SimpleBooleanProperty(this, "showTimeScaleView", true);
 
     /**
      * A property used to control the visibility of the time scale on the left-hand side.
-     * The time scale displays the time of day.
+     * The timescale displays the time of day.
      *
      * @return true if the scale will be visible
      */
@@ -326,7 +330,7 @@ public class DetailedWeekView extends DayViewBase {
     private final BooleanProperty showScrollBar = new SimpleBooleanProperty(this, "showScrollBar", true);
 
     /**
-     * A property used to control the visibility of the vertial scrollbar.
+     * A property used to control the visibility of the vertical scrollbar.
      *
      * @return true if the scrollbar should be shown to the user
      */
@@ -354,7 +358,7 @@ public class DetailedWeekView extends DayViewBase {
 
     // start date support
 
-    private final ReadOnlyObjectWrapper<LocalDate> startDate = new ReadOnlyObjectWrapper<>(this, "startDate"); //$NON-NLS-1$
+    private final ReadOnlyObjectWrapper<LocalDate> startDate = new ReadOnlyObjectWrapper<>(this, "startDate");
 
     /**
      * The earliest date shown by the view.
@@ -374,7 +378,7 @@ public class DetailedWeekView extends DayViewBase {
         return startDate.get();
     }
 
-    private final ReadOnlyObjectWrapper<LocalDate> endDate = new ReadOnlyObjectWrapper<>(this, "endDate"); //$NON-NLS-1$
+    private final ReadOnlyObjectWrapper<LocalDate> endDate = new ReadOnlyObjectWrapper<>(this, "endDate");
 
     // end date support
 
@@ -406,7 +410,7 @@ public class DetailedWeekView extends DayViewBase {
         setDate(getDate().minusDays(getNumberOfDays()));
     }
 
-    private static final String WEEK_VIEW_CATEGORY = "Week View"; //$NON-NLS-1$
+    private static final String WEEK_VIEW_CATEGORY = "Week View";
 
     @Override
     public ObservableList<Item> getPropertySheetItems() {
@@ -436,12 +440,12 @@ public class DetailedWeekView extends DayViewBase {
 
             @Override
             public String getName() {
-                return "Number of Days"; //$NON-NLS-1$
+                return "Number of Days";
             }
 
             @Override
             public String getDescription() {
-                return "Number of Days"; //$NON-NLS-1$
+                return "Number of Days";
             }
 
             @Override
@@ -622,12 +626,12 @@ public class DetailedWeekView extends DayViewBase {
 
             @Override
             public String getName() {
-                return "Adjust to first day of week"; //$NON-NLS-1$
+                return "Adjust to first day of week";
             }
 
             @Override
             public String getDescription() {
-                return "Adjust to first day of week"; //$NON-NLS-1$
+                return "Adjust to first day of week";
             }
 
             @Override

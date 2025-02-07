@@ -17,8 +17,7 @@
 package com.calendarfx.view;
 
 import com.calendarfx.model.Entry;
-import com.calendarfx.util.Util;
-import com.google.ical.values.RRule;
+
 import impl.com.calendarfx.view.RecurrenceViewSkin;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -27,9 +26,10 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.scene.control.Skin;
+import net.fortuna.ical4j.model.Recur;
 
-import java.text.ParseException;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 
 import static java.util.Objects.requireNonNull;
 
@@ -37,9 +37,9 @@ import static java.util.Objects.requireNonNull;
  * A custom control used for editing recurrence rules according to RFC 2445. The
  * image below shows the four configurations of the control depending on the
  * currently selected frequency (daily, weekly, monthly, yearly).
- * <p/>
- * <center><img width="80%" src="doc-files/recurrence-view.png"></center>
- * <p/>
+ *
+ * <img width="80%" src="doc-files/recurrence-view.png" alt="Recurrence Week">
+ *
  */
 public class RecurrenceView extends CalendarFXControl {
 
@@ -47,7 +47,7 @@ public class RecurrenceView extends CalendarFXControl {
      * Constructs a new recurrence view.
      */
     public RecurrenceView() {
-        getStyleClass().add("recurrence-view"); //$NON-NLS-1$
+        getStyleClass().add("recurrence-view");
     }
 
     @Override
@@ -56,7 +56,7 @@ public class RecurrenceView extends CalendarFXControl {
     }
 
     private final ObjectProperty<LocalDate> startDate = new SimpleObjectProperty<LocalDate>(
-            this, "startDate", LocalDate.now()) { //$NON-NLS-1$
+            this, "startDate", LocalDate.now()) {
         @Override
         public void set(LocalDate newValue) {
             requireNonNull(newValue);
@@ -96,15 +96,15 @@ public class RecurrenceView extends CalendarFXControl {
     }
 
     private final StringProperty recurrenceRule = new SimpleStringProperty(this,
-            "recurrenceRule", "RRULE:FREQ=DAILY") { //$NON-NLS-1$ //$NON-NLS-2$
+            "recurrenceRule", "RRULE:FREQ=DAILY") {
         @Override
         public void set(String newValue) {
             try {
                 if (newValue != null) {
-                    new RRule(newValue);
+                    new Recur(newValue.replaceFirst("^RRULE:", ""));
                 }
                 super.set(newValue);
-            } catch (ParseException e) {
+            } catch (IllegalArgumentException | DateTimeParseException e) {
                 e.printStackTrace();
             }
         }
@@ -142,7 +142,7 @@ public class RecurrenceView extends CalendarFXControl {
     }
 
     private final BooleanProperty showSummary = new SimpleBooleanProperty(this,
-            "showSummary", true); //$NON-NLS-1$
+            "showSummary", true);
 
     /**
      * A property used to control the visibility of the "summary" label. The

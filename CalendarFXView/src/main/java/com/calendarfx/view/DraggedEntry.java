@@ -53,8 +53,8 @@ public final class DraggedEntry extends Entry<Object> {
     }
 
     private Duration offsetDuration;
-    private Entry<?> originalEntry;
-    private Calendar originalCalendar;
+    private final Entry<?> originalEntry;
+    private final Calendar originalCalendar;
     private DragMode dragMode;
 
     /**
@@ -74,6 +74,7 @@ public final class DraggedEntry extends Entry<Object> {
         setUserObject(entry.getUserObject());
         setFullDay(entry.isFullDay());
         setInterval(entry.getInterval());
+        setZoneId(entry.getZoneId());
 
         getStyleClass().add("dragged-entry");
     }

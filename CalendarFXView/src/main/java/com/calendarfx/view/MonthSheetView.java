@@ -72,10 +72,10 @@ import static java.util.Objects.requireNonNull;
  * months or even a year. Each day is represented by a cell (see {@link DateCell}). Cells are
  * created by a cell factory and can be customized to fit an application's needs.
  * <h3>Screenshot (Using DetailedDateCell)</h3>
- * <center><img width="100%" src="doc-files/month-sheet-view.png"></center>
+ * <img width="100%" src="doc-files/month-sheet-view.png" alt="Month Sheet View">
  *
  * <h3>Screenshot (Using "aligned" weekday layout)</h3>
- * <center><img width="100%" src="doc-files/month-sheet-view-aligned.png"></center>
+ * <img width="100%" src="doc-files/month-sheet-view-aligned.png" alt="Month Sheet View Aligned">
  *
  * @see #setWeekDayLayout(WeekDayLayoutStrategy)
  * @see #setCellFactory(Callback)
@@ -136,17 +136,12 @@ public class MonthSheetView extends DateControl {
 
     private ContextMenu createContextMenu() {
         ContextMenu contextMenu = new ContextMenu();
-        MenuItem newEntry = new MenuItem(Messages.getString("MonthSheetView.ADD_NEW_EVENT")); //$NON-NLS-1$
+        MenuItem newEntry = new MenuItem(Messages.getString("MonthSheetView.ADD_NEW_EVENT"));
         newEntry.setOnAction(evt -> {
-
             LocalDate date = getDateSelectionModel().getLastSelected();
-            Entry<?> entry = createEntryAt(ZonedDateTime.of(date, LocalTime.of(12, 0), getZoneId()));
-
-            Callback<EntryDetailsParameter, Boolean> callback = getEntryDetailsCallback();
-            EntryDetailsParameter param = new EntryDetailsParameter(null, this, entry, dateCell, ctxMenuScreenX, ctxMenuScreenY);
-            callback.call(param);
-
+            createEntryAt(ZonedDateTime.of(date, LocalTime.of(12, 0), getZoneId()));
         });
+
         contextMenu.getItems().add(newEntry);
 
         contextMenu.getItems().add(new SeparatorMenuItem());
@@ -500,9 +495,7 @@ public class MonthSheetView extends DateControl {
             }
 
             YearMonth extendedEnd = getExtendedEndMonth();
-            if ((month.equals(extendedEnd) || month.isBefore(extendedEnd)) && month.isAfter(getEndMonth())) {
-                return true;
-            }
+            return (month.equals(extendedEnd) || month.isBefore(extendedEnd)) && month.isAfter(getEndMonth());
         }
         return false;
     }
@@ -524,9 +517,7 @@ public class MonthSheetView extends DateControl {
             LocalDate startDate = extendedStart.atDay(1);
             LocalDate endDate = extendedEnd.atEndOfMonth();
 
-            if ((date.equals(startDate) || date.isAfter(startDate)) && (date.equals(endDate) || date.isBefore(endDate))) {
-                return true;
-            }
+            return (date.equals(startDate) || date.isAfter(startDate)) && (date.equals(endDate) || date.isBefore(endDate));
         }
         return false;
     }
@@ -801,8 +792,8 @@ public class MonthSheetView extends DateControl {
      */
     public static final class DateParameter {
 
-        private MonthSheetView view;
-        private LocalDate date;
+        private final MonthSheetView view;
+        private final LocalDate date;
 
         /**
          * Constructs a new parameter object.
@@ -839,19 +830,19 @@ public class MonthSheetView extends DateControl {
      */
     public static final class HeaderParameter {
 
-        private MonthSheetView view;
-        private YearMonth yearMonth;
+        private final MonthSheetView view;
+        private final YearMonth yearMonth;
 
         public HeaderParameter(MonthSheetView view, YearMonth yearMonth) {
             this.view = Objects.requireNonNull(view);
             this.yearMonth = yearMonth;
         }
 
-        public final MonthSheetView getView() {
+        public MonthSheetView getView() {
             return view;
         }
 
-        public final YearMonth getYearMonth() {
+        public YearMonth getYearMonth() {
             return yearMonth;
         }
     }
@@ -885,12 +876,12 @@ public class MonthSheetView extends DateControl {
 
             @Override
             public String getName() {
-                return "Click Behaviour"; //$NON-NLS-1$
+                return "Click Behaviour";
             }
 
             @Override
             public String getDescription() {
-                return "Click behaviour"; //$NON-NLS-1$
+                return "Click behaviour";
             }
 
             @Override
@@ -1389,7 +1380,7 @@ public class MonthSheetView extends DateControl {
      */
     public static class DetailedDateCell extends SimpleDateCell {
 
-        private DetailCanvas canvas;
+        private final DetailCanvas canvas;
 
         private static final Map<String, Color> calendarColors = new HashMap<>();
 
@@ -1556,7 +1547,7 @@ public class MonthSheetView extends DateControl {
      */
     public static class BadgeDateCell extends SimpleDateCell {
 
-        private Label counterLabel;
+        private final Label counterLabel;
 
         /**
          * Constructs a new badge date cell.
@@ -1744,9 +1735,9 @@ public class MonthSheetView extends DateControl {
             double ps2 = dayOfWeekLabel.prefWidth(-1);
             double ps3 = weekNumberLabel.prefWidth(-1);
 
-            dayOfMonthLabel.resizeRelocate(snapPosition(left), snapPosition(top), snapSize(ps1), snapSize(availableHeight));
-            dayOfWeekLabel.resizeRelocate(snapPosition(left + ps1), snapPosition(top), snapSize(ps2), snapSize(availableHeight));
-            weekNumberLabel.resizeRelocate(snapPosition(w - right - ps3), snapPosition(top), snapSize(ps3), snapSize(availableHeight));
+            dayOfMonthLabel.resizeRelocate(snapPositionX(left), snapPositionY(top), snapSizeX(ps1), snapSizeY(availableHeight));
+            dayOfWeekLabel.resizeRelocate(snapPositionX(left + ps1), snapPositionY(top), snapSizeX(ps2), snapSizeY(availableHeight));
+            weekNumberLabel.resizeRelocate(snapPositionX(w - right - ps3), snapPositionY(top), snapSizeX(ps3), snapSizeY(availableHeight));
         }
 
         @Override

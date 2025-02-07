@@ -33,8 +33,8 @@ import java.util.List;
 @SuppressWarnings("javadoc")
 public class CalendarSelectorSkin extends SkinBase<CalendarSelector> {
 
-    private MenuButton button;
-    private Rectangle buttonIcon;
+    private final MenuButton button;
+    private final Rectangle buttonIcon;
 
     public CalendarSelectorSkin(CalendarSelector selector) {
         super(selector);
@@ -43,14 +43,13 @@ public class CalendarSelectorSkin extends SkinBase<CalendarSelector> {
 
         button = new MenuButton();
         button.setGraphic(buttonIcon);
-        button.getStylesheets().add(CalendarView.class.getResource("calendar.css").toExternalForm()); //$NON-NLS-1$
+        button.getStylesheets().add(CalendarView.class.getResource("calendar.css").toExternalForm());
 
         getChildren().add(button);
 
         selector.calendarProperty().addListener(it -> updateButton());
 
-        selector.getCalendars().addListener(
-                (Observable evt) -> updateMenuItems());
+        selector.getCalendars().addListener((Observable evt) -> updateMenuItems());
 
         updateMenuItems();
         updateButton();
@@ -59,7 +58,7 @@ public class CalendarSelectorSkin extends SkinBase<CalendarSelector> {
     private void updateButton() {
         Calendar calendar = getSkinnable().getCalendar();
         if (calendar != null) {
-            buttonIcon.getStyleClass().setAll(calendar.getStyle() + "-icon"); //$NON-NLS-1$
+            buttonIcon.getStyleClass().setAll(calendar.getStyle() + "-icon");
         } else {
             buttonIcon.getStyleClass().clear();
         }
@@ -73,7 +72,7 @@ public class CalendarSelectorSkin extends SkinBase<CalendarSelector> {
             Rectangle icon = new Rectangle(10, 10);
             icon.setArcHeight(2);
             icon.setArcWidth(2);
-            icon.getStyleClass().add(calendar.getStyle() + "-icon"); //$NON-NLS-1$
+            icon.getStyleClass().add(calendar.getStyle() + "-icon");
             item.setGraphic(icon);
             item.setDisable(calendar.isReadOnly());
             item.setOnAction(evt -> getSkinnable().setCalendar(calendar));

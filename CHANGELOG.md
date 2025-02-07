@@ -1,5 +1,48 @@
 # Change Log
 
+## [11.8.3](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/tree/11.8.3) (2019-10-23)
+[Full Changelog](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/compare/11.8.2...11.8.3)
+
+**Closed issues:**
+
+- Missing icons [\#57](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/issues/57)
+- Adapt iCal4j recurrence [\#50](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/issues/50)
+
+**Merged pull requests:**
+
+- Fix StringIndexOutOfBoundsException [\#63](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/pull/63) ([saarmbruster](https://github.com/saarmbruster))
+- Fix page without transition [\#61](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/pull/61) ([saarmbruster](https://github.com/saarmbruster))
+- Improve start-up performance [\#60](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/pull/60) ([saarmbruster](https://github.com/saarmbruster))
+
+## [11.8.2](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/tree/11.8.2) (2019-10-08)
+[Full Changelog](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/compare/11.8.1...11.8.2)
+
+**Closed issues:**
+
+- Merge updates from master into master-11 [\#59](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/issues/59)
+
+## [11.8.1](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/tree/11.8.1) (2019-10-01)
+[Full Changelog](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/compare/11.8.0...11.8.1)
+
+## [11.8.0](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/tree/11.8.0) (2019-09-27)
+[Full Changelog](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/compare/11.7.0...11.8.0)
+
+**Merged pull requests:**
+
+- Add missing German translation [\#58](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/pull/58) ([saarmbruster](https://github.com/saarmbruster))
+- Fix typo in private method name [\#56](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/pull/56) ([saarmbruster](https://github.com/saarmbruster))
+- Add listener to dayPageLayout [\#55](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/pull/55) ([saarmbruster](https://github.com/saarmbruster))
+- iCal4j recurrence [\#51](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/pull/51) ([mwkroening](https://github.com/mwkroening))
+
+## [11.7.0](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/tree/11.7.0) (2019-09-25)
+[Full Changelog](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/compare/11.6.4...11.7.0)
+
+## [11.6.4](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/tree/11.6.4) (2019-09-01)
+[Full Changelog](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/compare/11.6.3...11.6.4)
+
+## [11.6.3](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/tree/11.6.3) (2019-08-28)
+[Full Changelog](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/compare/8.6.1...11.6.3)
+
 ## [8.6.1](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/tree/8.6.1) (2019-08-28)
 [Full Changelog](https://github.com/dlsc-software-consulting-gmbh/CalendarFX/compare/8.6.0...8.6.1)
 

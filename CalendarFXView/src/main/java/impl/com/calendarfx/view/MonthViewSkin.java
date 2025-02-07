@@ -21,14 +21,15 @@ import com.calendarfx.model.CalendarEvent;
 import com.calendarfx.model.CalendarSource;
 import com.calendarfx.model.Entry;
 import com.calendarfx.util.LoggingDomain;
-import com.calendarfx.util.Util;
 import com.calendarfx.view.EntryViewBase.Position;
 import com.calendarfx.view.Messages;
 import com.calendarfx.view.MonthEntryView;
 import com.calendarfx.view.MonthView;
 import com.calendarfx.view.RequestEvent;
-import javafx.beans.InvalidationListener;
+import impl.com.calendarfx.view.util.Util;
+import javafx.application.Platform;
 import javafx.beans.Observable;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
@@ -45,6 +46,7 @@ import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
@@ -77,15 +79,15 @@ import static javafx.scene.layout.Priority.ALWAYS;
 
 public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDataSettingsProvider {
 
-    private static final String DAY_OF_WEEK_LABEL = "day-of-week-label"; //$NON-NLS-1$
+    private static final String DAY_OF_WEEK_LABEL = "day-of-week-label";
 
-    private static final String DAY_OF_WEEKEND_LABEL = "day-of-weekend-label"; //$NON-NLS-1$
+    private static final String DAY_OF_WEEKEND_LABEL = "day-of-weekend-label";
 
-    private GridPane gridPane;
+    private final GridPane gridPane;
 
-    private Map<LocalDate, MonthDayView> controlsMap = new HashMap<>();
+    private final Map<LocalDate, MonthDayView> controlsMap = new HashMap<>();
 
-    private DataLoader dataLoader;
+    private final DataLoader dataLoader;
 
     private YearMonth displayedYearMonth;
 
@@ -109,21 +111,20 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
         gridPane.getColumnConstraints().add(colCon);
 
         RowConstraints rowHeaderCon = new RowConstraints();
-
-        RowConstraints rowCon = new RowConstraints();
-        rowCon.setPercentHeight(100 / 6);
-
+        rowHeaderCon.setMinHeight(Region.USE_PREF_SIZE);
         gridPane.getRowConstraints().add(rowHeaderCon);
-        gridPane.getRowConstraints().add(rowCon);
-        gridPane.getRowConstraints().add(rowCon);
-        gridPane.getRowConstraints().add(rowCon);
-        gridPane.getRowConstraints().add(rowCon);
-        gridPane.getRowConstraints().add(rowCon);
-        gridPane.getRowConstraints().add(rowCon);
 
-        gridPane.getStyleClass().add("container"); //$NON-NLS-1$
+        for (int i = 0; i < 6; i++) {
+            RowConstraints rowCon = new RowConstraints();
+            gridPane.getRowConstraints().add(rowCon);
+        }
 
-        InvalidationListener updateViewListener = evt -> updateView();
+        gridPane.getStyleClass().add("container");
+
+        ChangeListener updateViewListener = (obs, oldV, newV) -> {
+            System.out.println("property: " + obs.toString());
+            updateView();
+        };
 
         view.yearMonthProperty().addListener(it -> {
             if (displayedYearMonth == null || !(displayedYearMonth.equals(view.getYearMonth()))) {
@@ -152,7 +153,7 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
 
         view.getSelectedDates().addListener((Observable observable) -> updateDaySelection());
 
-        view.getCalendars().addListener((javafx.beans.Observable obs) -> updateEntries("list of calendars changed"));
+        view.getCalendars().addListener((Observable obs) -> updateEntries("list of calendars changed"));
         view.suspendUpdatesProperty().addListener(it -> updateEntries("suspend updates set to false"));
     }
 
@@ -164,6 +165,11 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
     @Override
     protected void refreshData() {
         updateView();
+    }
+
+    @Override
+    protected void zoneIdChanged() {
+        updateEntries("time zone changed");
     }
 
     @Override
@@ -203,7 +209,7 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
         }
     }
 
-    private PseudoClass selectedClass = PseudoClass.getPseudoClass("selected"); //$NON-NLS-1$
+    private final PseudoClass selectedClass = PseudoClass.getPseudoClass("selected");
 
     private void updateDaySelection() {
         for (MonthDayView view : controlsMap.values()) {
@@ -229,7 +235,7 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
                     Entry<?> entry = entryView.getEntry();
                     if (entry != null) {
                         Object entryId = entryView.getEntry().getId();
-                        entryView.getProperties().put("selected", //$NON-NLS-1$
+                        entryView.getProperties().put("selected",
                                 selectedKeys.contains(entryId));
                     }
                 }
@@ -250,6 +256,7 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
 
         if (view.isShowWeekdays()) {
             for (int i = 0; i < 7; i++) {
+                // TODO: provide a factory for these labels
                 Label dayOfWeekLabel = new Label(dayOfWeek.getDisplayName(TextStyle.SHORT_STANDALONE, Locale.getDefault()));
                 dayOfWeekLabel.setAlignment(Pos.CENTER_RIGHT);
                 dayOfWeekLabel.setMaxSize(MAX_VALUE, MAX_VALUE);
@@ -269,10 +276,31 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
 
         date = Util.adjustToFirstDayOfWeek(date, getSkinnable().getFirstDayOfWeek());
 
-        for (int week = 0; week < 6; week++) {
-            for (int day = 0; day < 7; day++) {
-                // TODO: this should be done via a factory (cell factory already defined on MonthViewBase
+        final int firstWeek = 0;
+        final int lastWeek = 5;
+        final int firstDay = 0;
+        final int lastDay = 6;
+
+        for (int week = firstWeek; week <= lastWeek; week++) {
+            for (int day = firstDay; day <= lastDay; day++) {
+                // TODO: this should be done via a factory (cell factory already defined on MonthViewBase)
                 MonthDayView dayOfMonthLabel = new MonthDayView(date, week, day);
+                if (week == firstWeek) {
+                    dayOfMonthLabel.getStyleClass().add("first-week");
+                } else if (week == lastWeek) {
+                    dayOfMonthLabel.getStyleClass().add("last-week");
+                } else {
+                    dayOfMonthLabel.getStyleClass().add("middle-week");
+                }
+
+                if (day == firstDay) {
+                    dayOfMonthLabel.getStyleClass().add("first-day");
+                } else if (day == lastDay) {
+                    dayOfMonthLabel.getStyleClass().add("last-day");
+                } else {
+                    dayOfMonthLabel.getStyleClass().add("middle-day");
+                }
+
                 controlsMap.put(date, dayOfMonthLabel);
                 GridPane.setHgrow(dayOfMonthLabel, ALWAYS);
                 GridPane.setVgrow(dayOfMonthLabel, ALWAYS);
@@ -285,7 +313,7 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
         updateEntries("view was updated after a view property change");
     }
 
-    private List<Map<Object, Integer>> positionMaps = new ArrayList<>();
+    private final List<Map<Object, Integer>> positionMaps = new ArrayList<>();
 
     private int[][] numberOfFullDayEntries;
 
@@ -398,7 +426,7 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
 
     @Override
     public String getLoaderName() {
-        return "Month View"; //$NON-NLS-1$
+        return "Month View";
     }
 
     @Override
@@ -420,7 +448,7 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
 
     @Override
     public ZoneId getZoneId() {
-        return ZoneId.systemDefault();
+        return getSkinnable().getZoneId();
     }
 
     @Override
@@ -440,25 +468,25 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
 
     class MonthDayView extends VBox {
 
-        private static final String LAST_DAY_OF_WEEK = "last-day-of-week"; //$NON-NLS-1$
-        private static final String FIRST_DAY_OF_WEEK = "first-day-of-week"; //$NON-NLS-1$
+        private static final String LAST_DAY_OF_WEEK = "last-day-of-week";
+        private static final String FIRST_DAY_OF_WEEK = "first-day-of-week";
 
-        private static final String MONTH_DAY = "day"; //$NON-NLS-1$
-        private static final String MONTH_DAY_HEADER = "header"; //$NON-NLS-1$
-        private static final String MONTH_DAY_ENTRIES_PANE = "entries-pane"; //$NON-NLS-1$
-        private static final String MONTH_DAY_TODAY = "today"; //$NON-NLS-1$
-        private static final String MONTH_DAY_CURRENT_WEEK = "current-week"; //$NON-NLS-1$
+        private static final String MONTH_DAY = "day";
+        private static final String MONTH_DAY_HEADER = "header";
+        private static final String MONTH_DAY_ENTRIES_PANE = "entries-pane";
+        private static final String MONTH_DAY_TODAY = "today";
+        private static final String MONTH_DAY_CURRENT_WEEK = "current-week";
 
-        private static final String WEEKEND_DAY = "weekend-day"; //$NON-NLS-1$
-        private static final String DAY_NOT_OF_MONTH_LABEL = "day-not-of-month-label"; //$NON-NLS-1$
-        private static final String DAY_OF_MONTH_LABEL = "day-of-month-label"; //$NON-NLS-1$
-        private static final String TODAY_LABEL = "today-label"; //$NON-NLS-1$
-        private static final String WEEK_OF_YEAR_LABEL = "week-of-year-label"; //$NON-NLS-1$
-        private static final String CURRENT_WEEK_OF_YEAR_LABEL = "current-week-of-year-label"; //$NON-NLS-1$
+        private static final String WEEKEND_DAY = "weekend-day";
+        private static final String DAY_NOT_OF_MONTH_LABEL = "day-not-of-month-label";
+        private static final String DAY_OF_MONTH_LABEL = "day-of-month-label";
+        private static final String TODAY_LABEL = "today-label";
+        private static final String WEEK_OF_YEAR_LABEL = "week-of-year-label";
+        private static final String CURRENT_WEEK_OF_YEAR_LABEL = "current-week-of-year-label";
 
-        private MonthDayEntriesPane entriesPane;
+        private final MonthDayEntriesPane entriesPane;
 
-        private LocalDate date;
+        private final LocalDate date;
 
         MonthDayView(LocalDate date, int week, int day) {
             this.date = date;
@@ -508,7 +536,7 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
 
             if (getSkinnable().isShowCurrentWeek() && date.getYear() == monthView.getToday().getYear()
                     && weekOfYear == monthView.getToday().get(weekFields.weekOfYear())) {
-                dateLabel.setText(DateTimeFormatter.ofPattern(Messages.getString("MonthViewSkin.TODAY_DATE_FORMAT")).format(date)); //$NON-NLS-1$
+                dateLabel.setText(DateTimeFormatter.ofPattern(Messages.getString("MonthViewSkin.TODAY_DATE_FORMAT")).format(date));
                 weekLabel.getStyleClass().add(CURRENT_WEEK_OF_YEAR_LABEL);
                 getStyleClass().add(MONTH_DAY_CURRENT_WEEK);
             } else {
@@ -585,13 +613,13 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
 
     class MonthDayEntriesPane extends Pane {
 
-        private static final String MONTH_DAY_MORE_LABEL = "more-label"; //$NON-NLS-1$
+        private static final String MONTH_DAY_MORE_LABEL = "more-label";
         private static final String SPACE = " ";
 
-        private Label moreLabel;
-        private LocalDate date;
-        private int week;
-        private int day;
+        private final Label moreLabel;
+        private final LocalDate date;
+        private final int week;
+        private final int day;
 
         MonthDayEntriesPane(LocalDate date, int week, int day) {
             getStyleClass().add("entries-pane");
@@ -600,7 +628,8 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
             this.week = week;
             this.day = day;
 
-            entries.addListener((Observable evt) -> update());
+            // since JavaFX 19 this needs to be run later
+            entries.addListener((Observable evt) -> Platform.runLater(() -> update()));
 
             setMinSize(0, 0);
             setPrefSize(0, 0);
@@ -630,7 +659,7 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
         }
 
         private void update() {
-            getChildren().removeIf(node -> node instanceof MonthEntryView);
+            Util.removeChildren(this, node -> node instanceof MonthEntryView);
 
             if (!entries.isEmpty()) {
 
@@ -659,7 +688,7 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
                          */
                         MonthEntryView label = new MonthEntryView(new Entry<>(SPACE));
                         label.setVisible(false);
-                        label.getProperties().put("control", getSkinnable()); //$NON-NLS-1$
+                        label.getProperties().put("control", getSkinnable());
                         fullDayNodes[i] = label;
                     }
 
@@ -690,9 +719,9 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
         private Node createNode(Entry<?> entry) {
             Callback<Entry<?>, MonthEntryView> factory = getSkinnable().getEntryViewFactory();
             MonthEntryView view = factory.call(entry);
-            view.getProperties().put("control", getSkinnable()); //$NON-NLS-1$
-            view.getProperties().put("startDate", date); //$NON-NLS-1$
-            view.getProperties().put("endDate", date); //$NON-NLS-1$
+            view.getProperties().put("control", getSkinnable());
+            view.getProperties().put("startDate", date);
+            view.getProperties().put("endDate", date);
 
             Position position = Position.ONLY;
 
@@ -714,7 +743,7 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
                 }
             }
 
-            view.getProperties().put("position", position); //$NON-NLS-1$
+            view.getProperties().put("position", position);
 
             return view;
         }
@@ -741,13 +770,13 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
                 double ph = child.prefHeight(-1);
                 if (y + ph < h - insets.getTop() - insets.getBottom()) {
                     child.resizeRelocate(
-                            snapPosition(insets.getLeft()),
-                            snapPosition(y),
-                            snapSize(w - insets.getRight() - insets.getLeft()),
-                            snapSize(ph));
+                            snapPositionX(insets.getLeft()),
+                            snapPositionY(y),
+                            snapSizeX(w - insets.getRight() - insets.getLeft()),
+                            snapSizeY(ph));
 
                     y += ph + 1; // +1 = gap
-                    child.getProperties().put("hidden", false); //$NON-NLS-1$
+                    child.getProperties().put("hidden", false);
                     childrenAdded++;
                 } else {
                     if (!conflictFound && i > 0) {
@@ -765,20 +794,19 @@ public class MonthViewSkin extends DateControlSkin<MonthView> implements LoadDat
                 double ph = moreLabel.prefHeight(-1);
 
                 moreLabel.resizeRelocate(
-                        snapPosition(insets.getLeft()),
-                        snapPosition(h - insets.getTop() - insets.getBottom() - ph),
-                        snapSize(w - insets.getRight() - insets.getLeft()),
-                        snapSize(ph));
+                        snapPositionX(insets.getLeft()),
+                        snapPositionY(h - insets.getTop() - insets.getBottom() - ph),
+                        snapSizeX(w - insets.getRight() - insets.getLeft()),
+                        snapSizeY(ph));
             }
         }           
     }
 
-    
-    public ZonedDateTime getZonedDateTimeAt(double x, double y) {
+    public ZonedDateTime getZonedDateTimeAt(double x, double y, ZoneId zoneId) {
         Point2D location = getSkinnable().localToScreen(x, y);
         for (MonthDayView view : controlsMap.values()) {
             if (view.localToScreen(view.getLayoutBounds()).contains(location)) {
-                return ZonedDateTime.of(view.getDate(), LocalTime.NOON, getSkinnable().getZoneId());
+                return ZonedDateTime.of(view.getDate(), LocalTime.NOON, zoneId);
             }
         }
 

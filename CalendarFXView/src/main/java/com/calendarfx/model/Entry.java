@@ -16,10 +16,6 @@
 
 package com.calendarfx.model;
 
-import com.google.ical.compat.javatime.LocalDateIterator;
-import com.google.ical.compat.javatime.LocalDateIteratorFactory;
-import com.google.ical.values.DateValue;
-import com.google.ical.values.RRule;
 import impl.com.calendarfx.view.util.Util;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -38,18 +34,21 @@ import javafx.collections.FXCollections;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
+import net.fortuna.ical4j.model.Recur;
 import org.controlsfx.control.PropertySheet.Item;
 
-import java.text.ParseException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 import static com.calendarfx.util.LoggingDomain.MODEL;
 import static java.util.Objects.requireNonNull;
@@ -59,27 +58,24 @@ import static java.util.logging.Level.FINE;
  * An entry inside a calendar, for example "Dentist Appointment, Feb 2nd, 9am".
  * Entries are added to and managed by calendars. The main attributes of an
  * entry are:
- * <p/>
+ *
  * <ul>
  * <li><b>Title</b> - the title shown to the user in the UI</li>
- * <li><b>Interval</b> - the time interval and time zone occupied by the entry
- * </li> valid for</li>
- * <li><b>Full Day</b> - a flag signalling whether the entry should be treated
- * as a "full day" event, e.g. a birthday</li>
+ * <li><b>Interval</b> - the time interval and time zone occupied by the entry</li>
+ * <li><b>Full Day</b> - a flag signalling whether the entry should be treated as a "full day" event, e.g. a birthday</li>
  * <li><b>Calendar</b> - the calendar to which the entry belongs</li>
  * </ul>
- * <br/>
  * The default minimum duration of an entry is 15 minutes.
- * <p>
+ *
  * <h2>Visual Appearance</h2>
  * The image below shows an entry called "dentist appointment" as it would be visualized
  * via an {@link com.calendarfx.view.DayEntryView} inside a {@link com.calendarfx.view.DayView}.
- * <p/>
- * <center><img src="doc-files/entry.png"></center>
- * <p/>
- * <p>
+ *
+ * <img src="doc-files/entry.png" alt="Entry">
+ *
+ *
  * <h2>Recurrence</h2>
- * <p/>
+ * <p>
  * This class supports the industry standard for defining recurring events (RFC
  * 2445). For recurring events the method {@link #setRecurrenceRule(String)}
  * must be fed with a valid RRULE string, for example "RRULE:FREQ=DAILY" for an
@@ -89,9 +85,9 @@ import static java.util.logging.Level.FINE;
  * invoked. Recurring entries will return "true" when their
  * {@link #isRecurrence()} method is called and they will also be able to return
  * the "source" entry ({@link #getRecurrenceSourceEntry()}).
- * <p>
+ *
  * <h2>Example</h2>
- * <p>
+ *
  * <pre>
  * Entry entry = new Entry(&quot;Dentist Appointment&quot;);
  * Interval interval = new Interval(...);
@@ -108,29 +104,46 @@ public class Entry<T> implements Comparable<Entry<?>> {
 
     private static final Duration DEFAULT_MINIMUM_DURATION = Duration.ofMinutes(15);
 
-    private static long idCounter;
-
-    // needs to be thread-safe
-    private static synchronized String createId() {
-        return Long.toString(idCounter++);
-    }
-
-    private String id = createId();
+    private String id;
 
     /**
-     * Constructs a new untitled entry.
+     * Constructs a new entry with a default time interval. The ID will be generated
+     * via {@link UUID#randomUUID()}.
      */
     public Entry() {
-        this("Untitled", new Interval());
+        this(UUID.randomUUID().toString());
     }
 
     /**
      * Constructs a new entry with the given title and a default time interval.
+     * The ID will be generated via {@link UUID#randomUUID()}.
      *
      * @param title the title shown to the user
      */
     public Entry(String title) {
-        this(title, new Interval());
+        this(title, new Interval(), UUID.randomUUID().toString());
+    }
+
+    /**
+     * Constructs a new entry with the given title, a default time interval, and
+     * the given ID.
+     *
+     * @param title the title shown to the user
+     * @param id the unique id of the entry
+     */
+    public Entry(String title, String id) {
+        this(title, new Interval(), id);
+    }
+
+    /**
+     * Constructs a new entry with the given title. The ID will be generated
+     * via {@link UUID#randomUUID()}.
+     *
+     * @param title    the title shown to the user
+     * @param interval the time interval where the entry is located
+     */
+    public Entry(String title, Interval interval) {
+        this(title, interval, UUID.randomUUID().toString());
     }
 
     /**
@@ -138,13 +151,16 @@ public class Entry<T> implements Comparable<Entry<?>> {
      *
      * @param title    the title shown to the user
      * @param interval the time interval where the entry is located
+     * @param id       a unique ID, e.g. UUID.randomUUID();
      */
-    public Entry(String title, Interval interval) {
+    public Entry(String title, Interval interval, String id) {
         requireNonNull(title);
         requireNonNull(interval);
+        requireNonNull(id);
 
         setTitle(title);
         setInterval(interval);
+        this.id = id;
     }
 
     // A map containing a set of properties for this entry
@@ -162,7 +178,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
             properties = FXCollections.observableMap(new HashMap<>());
 
             MapChangeListener<? super Object, ? super Object> changeListener = change -> {
-                if (change.getKey().equals("com.calendarfx.recurrence.source")) { //$NON-NLS-1$
+                if (change.getKey().equals("com.calendarfx.recurrence.source")) {
                     if (change.getValueAdded() != null) {
                         @SuppressWarnings("unchecked")
                         Entry<T> source = (Entry<T>) change.getValueAdded();
@@ -171,7 +187,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
                         recurrenceSourceProperty();
                         recurrenceSource.set(source);
                     }
-                } else if (change.getKey().equals("com.calendarfx.recurrence.id")) { //$NON-NLS-1$
+                } else if (change.getKey().equals("com.calendarfx.recurrence.id")) {
                     if (change.getValueAdded() != null) {
                         setRecurrenceId((String) change.getValueAdded());
                     }
@@ -222,7 +238,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
         return styleClass;
     }
 
-    private final ObjectProperty<Interval> interval = new SimpleObjectProperty<Interval>(this, "interval") { //$NON-NLS-1$
+    private final ObjectProperty<Interval> interval = new SimpleObjectProperty<>(this, "interval") {
         @Override
         public void set(Interval newInterval) {
 
@@ -232,7 +248,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
 
             Interval oldInterval = getValue();
 
-            if (!Util.equals(newInterval, oldInterval)) {
+            if (!Objects.equals(newInterval, oldInterval)) {
 
                 Calendar calendar = getCalendar();
 
@@ -312,16 +328,15 @@ public class Entry<T> implements Comparable<Entry<?>> {
     // Set Interval: LocalDate support
 
     public final void setInterval(LocalDate date) {
-        setInterval(date, ZoneId.systemDefault());
+        setInterval(date, getZoneId());
     }
 
     public final void setInterval(LocalDate date, ZoneId zoneId) {
         setInterval(date, date, zoneId);
     }
 
-
     public final void setInterval(LocalDate startDate, LocalDate endDate) {
-        setInterval(startDate, endDate, ZoneId.systemDefault());
+        setInterval(startDate, endDate, getZoneId());
     }
 
     public final void setInterval(LocalDate startDate, LocalDate endDate, ZoneId zoneId) {
@@ -329,7 +344,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
     }
 
     public final void setInterval(LocalDate startDate, LocalTime startTime, LocalDate endDate, LocalTime endTime) {
-        setInterval(startDate, startTime, endDate, endTime, ZoneId.systemDefault());
+        setInterval(startDate, startTime, endDate, endTime, getZoneId());
     }
 
     public final void setInterval(LocalDate startDate, LocalTime startTime, LocalDate endDate, LocalTime endTime, ZoneId zoneId) {
@@ -339,7 +354,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
     // Set Interval: LocalTime support
 
     public final void setInterval(LocalTime startTime, LocalTime endTime) {
-        setInterval(startTime, endTime, ZoneId.systemDefault());
+        setInterval(startTime, endTime, getZoneId());
     }
 
     public final void setInterval(LocalTime startTime, LocalTime endTime, ZoneId zoneId) {
@@ -357,7 +372,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
     }
 
     public final void setInterval(LocalDateTime startDateTime, LocalDateTime endDateTime) {
-        setInterval(startDateTime, endDateTime, ZoneId.systemDefault());
+        setInterval(startDateTime, endDateTime, getZoneId());
     }
 
     public final void setInterval(LocalDateTime startDateTime, LocalDateTime endDateTime, ZoneId zoneId) {
@@ -547,6 +562,16 @@ public class Entry<T> implements Comparable<Entry<?>> {
         }
     }
 
+    /**
+     * Changes the zone ID of the entry interval.
+     *
+     * @param zoneId the new zone
+     */
+    public final void changeZoneId(ZoneId zoneId) {
+        requireNonNull(zoneId);
+        setInterval(getInterval().withZoneId(zoneId));
+    }
+
     private ReadOnlyObjectWrapper<Entry<T>> recurrenceSource;
 
     /**
@@ -558,15 +583,11 @@ public class Entry<T> implements Comparable<Entry<?>> {
      */
     public final ReadOnlyObjectProperty<Entry<T>> recurrenceSourceProperty() {
         if (recurrenceSource == null) {
-            recurrenceSource = new ReadOnlyObjectWrapper<Entry<T>>(this, "recurrenceSource") { //$NON-NLS-1$
+            recurrenceSource = new ReadOnlyObjectWrapper<Entry<T>>(this, "recurrenceSource") {
                 @Override
                 public void set(Entry<T> newEntry) {
                     super.set(newEntry);
-                    if (newEntry != null) {
-                        setRecurrence(true);
-                    } else {
-                        setRecurrence(false);
-                    }
+                    setRecurrence(newEntry != null);
                 }
             };
         }
@@ -614,7 +635,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
      */
     public final ReadOnlyBooleanProperty recurrenceProperty() {
         if (recurrence == null) {
-            recurrence = new ReadOnlyBooleanWrapper(this, "recurrence", _recurrence); //$NON-NLS-1$
+            recurrence = new ReadOnlyBooleanWrapper(this, "recurrence", _recurrence);
         }
         return recurrence.getReadOnlyProperty();
     }
@@ -643,7 +664,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
      * @see #recurrenceRuleProperty()
      */
     public final boolean isRecurring() {
-        return recurrenceRule != null && !(recurrenceRule.get() == null) && !recurrenceRule.get().trim().equals(""); //$NON-NLS-1$
+        return recurrenceRule != null && !(recurrenceRule.get() == null) && !recurrenceRule.get().isBlank();
     }
 
     /*
@@ -656,7 +677,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
      * A property used to store a recurrence rule according to RFC-2445.
      * <h3>Example</h3> Repeat entry / event every other day until September
      * 1st, 2015.
-     * <p>
+     *
      * <pre>
      * String rrule = "RRULE:FREQ=DAILY;INTERVAL=2;UNTIL=20150901";
      * setRecurrenceRule(rrule);
@@ -667,12 +688,12 @@ public class Entry<T> implements Comparable<Entry<?>> {
      */
     public final StringProperty recurrenceRuleProperty() {
         if (recurrenceRule == null) {
-            recurrenceRule = new SimpleStringProperty(null, "recurrenceRule") { //$NON-NLS-1$
+            recurrenceRule = new SimpleStringProperty(null, "recurrenceRule") {
                 @Override
                 public void set(String newRecurrence) {
                     String oldRecurrence = get();
 
-                    if (!Util.equals(oldRecurrence, newRecurrence)) {
+                    if (!Objects.equals(oldRecurrence, newRecurrence)) {
 
                         Calendar calendar = getCalendar();
 
@@ -694,16 +715,12 @@ public class Entry<T> implements Comparable<Entry<?>> {
                 }
 
                 private void updateRecurrenceEndProperty(String newRecurrence) {
-                    if (newRecurrence != null && !newRecurrence.trim().equals("")) { //$NON-NLS-1$
+                    if (newRecurrence != null && !newRecurrence.trim().equals("")) {
                         try {
-                            RRule rule = new RRule(newRecurrence);
-                            DateValue until = rule.getUntil();
-                            if (until != null) {
-                                setRecurrenceEnd(LocalDate.of(until.year(), until.month(), until.day()));
-                            } else {
-                                setRecurrenceEnd(LocalDate.MAX);
-                            }
-                        } catch (ParseException e) {
+                            Recur<LocalDate> recur = new Recur<>(newRecurrence.replaceFirst("^RRULE:", ""));
+                            setRecurrenceEnd(Objects.requireNonNullElse(recur.getUntil(), LocalDate.MAX));
+                        } catch (IllegalArgumentException |
+                                 DateTimeParseException e) {
                             e.printStackTrace();
                         }
                     } else {
@@ -750,7 +767,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
      */
     public final ReadOnlyStringProperty recurrenceIdProperty() {
         if (recurrenceId == null) {
-            recurrenceId = new ReadOnlyStringWrapper(this, "recurrenceId", _recurrenceId); //$NON-NLS-1$
+            recurrenceId = new ReadOnlyStringWrapper(this, "recurrenceId", _recurrenceId);
         }
 
         return recurrenceId.getReadOnlyProperty();
@@ -785,7 +802,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
      */
     public final ReadOnlyObjectProperty<LocalDate> recurrenceEndProperty() {
         if (recurrenceEnd == null) {
-            recurrenceEnd = new ReadOnlyObjectWrapper<>(this, "recurrenceEnd", _recurrenceEnd); //$NON-NLS-1$
+            recurrenceEnd = new ReadOnlyObjectWrapper<>(this, "recurrenceEnd", _recurrenceEnd);
         }
 
         return recurrenceEnd.getReadOnlyProperty();
@@ -820,7 +837,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
     public final void setId(String id) {
         requireNonNull(id);
         if (MODEL.isLoggable(FINE)) {
-            MODEL.fine("setting id to " + id); //$NON-NLS-1$
+            MODEL.fine("setting id to " + id);
         }
         this.id = id;
     }
@@ -837,13 +854,13 @@ public class Entry<T> implements Comparable<Entry<?>> {
     /*
      * Calendar support.
      */
-    private SimpleObjectProperty<Calendar> calendar = new SimpleObjectProperty<Calendar>(this, "calendar") { //$NON-NLS-1$
+    private final SimpleObjectProperty<Calendar> calendar = new SimpleObjectProperty<Calendar>(this, "calendar") {
 
         @Override
         public void set(Calendar newCalendar) {
             Calendar oldCalendar = get();
 
-            if (!Util.equals(oldCalendar, newCalendar)) {
+            if (!Objects.equals(oldCalendar, newCalendar)) {
 
                 if (oldCalendar != null) {
                     if (!isRecurrence()) {
@@ -917,7 +934,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
      */
     public final ObjectProperty<T> userObjectProperty() {
         if (userObject == null) {
-            userObject = new SimpleObjectProperty<T>(this, "userObject") { //$NON-NLS-1$
+            userObject = new SimpleObjectProperty<T>(this, "userObject") {
                 @Override
                 public void set(T newObject) {
                     T oldUserObject = get();
@@ -975,7 +992,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
      */
     public final ReadOnlyObjectProperty<ZoneId> zoneIdProperty() {
         if (zoneId == null) {
-            zoneId = new ReadOnlyObjectWrapper<>(this, "zoneId", getInterval().getZoneId()); //$NON-NLS-1$
+            zoneId = new ReadOnlyObjectWrapper<>(this, "zoneId", getInterval().getZoneId());
         }
 
         return zoneId.getReadOnlyProperty();
@@ -1003,12 +1020,12 @@ public class Entry<T> implements Comparable<Entry<?>> {
     /*
      * Title support.
      */
-    private final StringProperty title = new SimpleStringProperty(this, "title") { //$NON-NLS-2$
+    private final StringProperty title = new SimpleStringProperty(this, "title") {
         @Override
         public void set(String newTitle) {
             String oldTitle = get();
 
-            if (!Util.equals(oldTitle, newTitle)) {
+            if (!Objects.equals(oldTitle, newTitle)) {
                 super.set(newTitle);
 
                 Calendar calendar = getCalendar();
@@ -1061,12 +1078,12 @@ public class Entry<T> implements Comparable<Entry<?>> {
      */
     public final StringProperty locationProperty() {
         if (location == null) {
-            location = new SimpleStringProperty(null, "location") { //$NON-NLS-1$
+            location = new SimpleStringProperty(null, "location") {
                 @Override
                 public void set(String newLocation) {
                     String oldLocation = get();
 
-                    if (!Util.equals(oldLocation, newLocation)) {
+                    if (!Objects.equals(oldLocation, newLocation)) {
 
                         super.set(newLocation);
 
@@ -1115,7 +1132,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
      */
     public final ReadOnlyObjectProperty<LocalDate> startDateProperty() {
         if (startDate == null) {
-            startDate = new ReadOnlyObjectWrapper<>(this, "startDate", getInterval().getStartDate()); //$NON-NLS-1$
+            startDate = new ReadOnlyObjectWrapper<>(this, "startDate", getInterval().getStartDate());
         }
         return startDate.getReadOnlyProperty();
     }
@@ -1141,7 +1158,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
      */
     public final ReadOnlyObjectProperty<LocalTime> startTimeProperty() {
         if (startTime == null) {
-            startTime = new ReadOnlyObjectWrapper<>(this, "startTime", getInterval().getStartTime()); //$NON-NLS-1$
+            startTime = new ReadOnlyObjectWrapper<>(this, "startTime", getInterval().getStartTime());
         }
         return startTime.getReadOnlyProperty();
     }
@@ -1167,7 +1184,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
      */
     public final ReadOnlyObjectProperty<LocalDate> endDateProperty() {
         if (endDate == null) {
-            endDate = new ReadOnlyObjectWrapper<>(this, "endDate", getInterval().getEndDate()); //$NON-NLS-1$
+            endDate = new ReadOnlyObjectWrapper<>(this, "endDate", getInterval().getEndDate());
         }
 
         return endDate.getReadOnlyProperty();
@@ -1194,7 +1211,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
      */
     public final ReadOnlyObjectProperty<LocalTime> endTimeProperty() {
         if (endTime == null) {
-            endTime = new ReadOnlyObjectWrapper<>(this, "endTime", getInterval().getEndTime()); //$NON-NLS-1$
+            endTime = new ReadOnlyObjectWrapper<>(this, "endTime", getInterval().getEndTime());
         }
 
         return endTime.getReadOnlyProperty();
@@ -1213,13 +1230,13 @@ public class Entry<T> implements Comparable<Entry<?>> {
     /*
      * Full day support.
      */
-    private final BooleanProperty fullDay = new SimpleBooleanProperty(this, "fullDay", false) { //$NON-NLS-1$
+    private final BooleanProperty fullDay = new SimpleBooleanProperty(this, "fullDay", false) {
 
         @Override
         public void set(boolean newFullDay) {
             boolean oldFullDay = get();
 
-            if (!Util.equals(oldFullDay, newFullDay)) {
+            if (!Objects.equals(oldFullDay, newFullDay)) {
 
                 super.set(newFullDay);
 
@@ -1235,8 +1252,8 @@ public class Entry<T> implements Comparable<Entry<?>> {
      * A property used to signal whether an entry is considered to be a
      * "full day" entry, for example a birthday. The image below shows how full
      * day entries are shown in the UI.
-     * <p/>
-     * <center><img width="100%" src="doc-files/full-day.png"></center>
+     *
+     * <img width="100%" src="doc-files/full-day.png" alt="Full Day">
      *
      * @return the full day property
      */
@@ -1278,7 +1295,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
      */
     public final ObjectProperty<Duration> minimumDurationProperty() {
         if (minimumDuration == null) {
-            minimumDuration = new SimpleObjectProperty<>(this, "minimumDuration", _minimumDuration); //$NON-NLS-1$
+            minimumDuration = new SimpleObjectProperty<>(this, "minimumDuration", _minimumDuration);
         }
         return minimumDuration;
     }
@@ -1408,8 +1425,8 @@ public class Entry<T> implements Comparable<Entry<?>> {
     /**
      * A read-only property to determine if the entry spans several days. The
      * image below shows such an entry.
-     * <p/>
-     * <center><img src="doc-files/multi-day.png"></center>
+     *
+     * <img src="doc-files/multi-day.png" alt="Multi Day">
      *
      * @return true if the end date is after the start date (multiple days)
      * @see #getStartDate()
@@ -1417,7 +1434,7 @@ public class Entry<T> implements Comparable<Entry<?>> {
      */
     public final ReadOnlyBooleanProperty multiDayProperty() {
         if (multiDay == null) {
-            multiDay = new ReadOnlyBooleanWrapper(this, "multiDay", _multiDay); //$NON-NLS-1$
+            multiDay = new ReadOnlyBooleanWrapper(this, "multiDay", _multiDay);
         }
         return multiDay.getReadOnlyProperty();
     }
@@ -1501,15 +1518,32 @@ public class Entry<T> implements Comparable<Entry<?>> {
         return Util.intersect(interval.getStartZonedDateTime(), interval.getEndZonedDateTime(), st, et);
     }
 
-    private boolean isRecurrenceShowing(Entry<?> entry, ZonedDateTime st, ZonedDateTime et, ZoneId zoneId) {
-        String recurrenceRule = entry.getRecurrenceRule();
+    private final BooleanProperty hidden = new SimpleBooleanProperty(this, "hidden", false);
 
-        LocalDate utilStartDate = entry.getStartAsZonedDateTime().toLocalDate();
+    public final boolean isHidden() {
+        return hidden.get();
+    }
+
+    public final BooleanProperty hiddenProperty() {
+        return hidden;
+    }
+
+    /**
+     * An entry can be made explicitly hidden.
+     *
+     * @param hidden true if the entry should not be visible in the calendar
+     */
+    public final void setHidden(boolean hidden) {
+        this.hidden.set(hidden);
+    }
+
+    private boolean isRecurrenceShowing(Entry<?> entry, ZonedDateTime st, ZonedDateTime et, ZoneId zoneId) {
+        String recurrenceRule = entry.getRecurrenceRule().replaceFirst("^RRULE:", "");
+
+        LocalDate utilStartDate = entry.getStartDate();
 
         try {
             LocalDate utilEndDate = et.toLocalDate();
-
-            LocalDateIterator iterator = LocalDateIteratorFactory.createLocalDateIterator(recurrenceRule, utilStartDate, zoneId, true);
 
             /*
              * TODO: for performance reasons we should definitely
@@ -1520,22 +1554,19 @@ public class Entry<T> implements Comparable<Entry<?>> {
              * with the given day. We have to find a solution for
              * this.
              */
-            // iterator.advanceTo(org.joda.time.LocalDate.fromDateFields(Date.from(st.toInstant())));
+            // iterator.advanceTo(st.toLocalDate());
 
-            while (iterator.hasNext()) {
-                LocalDate repeatingDate = iterator.next();
-                if (repeatingDate.isAfter(utilEndDate)) {
-                    break;
-                } else {
-                    ZonedDateTime recurrenceStart = ZonedDateTime.of(repeatingDate, LocalTime.MIN, zoneId);
-                    ZonedDateTime recurrenceEnd = recurrenceStart.plus(entry.getDuration());
+            List<LocalDate> dateList = new Recur<LocalDate>(recurrenceRule).getDates(utilStartDate, utilEndDate);
 
-                    if (Util.intersect(recurrenceStart, recurrenceEnd, st, et)) {
-                        return true;
-                    }
+            for (LocalDate repeatingDate : dateList) {
+                ZonedDateTime recurrenceStart = ZonedDateTime.of(repeatingDate, LocalTime.MIN, zoneId);
+                ZonedDateTime recurrenceEnd = recurrenceStart.plus(entry.getDuration());
+
+                if (Util.intersect(recurrenceStart, recurrenceEnd, st, et)) {
+                    return true;
                 }
             }
-        } catch (ParseException ex) {
+        } catch (IllegalArgumentException | DateTimeParseException ex) {
             ex.printStackTrace();
         }
 
@@ -1560,8 +1591,8 @@ public class Entry<T> implements Comparable<Entry<?>> {
         LocalDateTime b = LocalDateTime.of(other.getStartDate(), other.getStartTime());
         int result = a.compareTo(b);
         if (result == 0) {
-            String titleA = getTitle() != null ? getTitle() : ""; //$NON-NLS-1$
-            String titleB = other.getTitle() != null ? other.getTitle() : ""; //$NON-NLS-1$
+            String titleA = getTitle() != null ? getTitle() : "";
+            String titleB = other.getTitle() != null ? other.getTitle() : "";
             result = titleA.compareTo(titleB);
         }
 
@@ -1570,12 +1601,12 @@ public class Entry<T> implements Comparable<Entry<?>> {
 
     @Override
     public String toString() {
-        return "Entry [title=" + getTitle() + ", id=" + getId() + ", fullDay=" //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
-                + isFullDay() + ", startDate=" + getStartDate() + ", endDate=" //$NON-NLS-1$ //$NON-NLS-2$
-                + getEndDate() + ", startTime=" + getStartTime() + ", endTime=" //$NON-NLS-1$ //$NON-NLS-2$
-                + getEndTime() + ", zoneId=" + getZoneId() + ", recurring = " //$NON-NLS-1$ //$NON-NLS-2$
-                + isRecurring() + ", rrule = " + getRecurrenceRule() //$NON-NLS-1$
-                + ", recurrence = " + isRecurrence() + "]"; //$NON-NLS-1$ //$NON-NLS-2$
+        return "Entry [title=" + getTitle() + ", id=" + getId() + ", fullDay="
+                + isFullDay() + ", startDate=" + getStartDate() + ", endDate="
+                + getEndDate() + ", startTime=" + getStartTime() + ", endTime="
+                + getEndTime() + ", zoneId=" + getZoneId() + ", recurring = "
+                + isRecurring() + ", rrule = " + getRecurrenceRule()
+                + ", recurrence = " + isRecurrence() + "]";
     }
 
     @Override
@@ -1590,31 +1621,35 @@ public class Entry<T> implements Comparable<Entry<?>> {
     @SuppressWarnings("rawtypes")
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
-        if (obj == null)
+        }
+        if (obj == null) {
             return false;
-        if (getClass() != obj.getClass())
+        }
+        if (getClass() != obj.getClass()) {
             return false;
+        }
         Entry other = (Entry) obj;
         if (id == null) {
-            if (other.id != null)
+            if (other.id != null) {
                 return false;
-        } else if (!id.equals(other.id))
+            }
+        } else if (!id.equals(other.id)) {
             return false;
+        }
 
         String recId = getRecurrenceId();
         String otherRecId = other.getRecurrenceId();
 
         if (recId == null) {
-            if (otherRecId != null)
-                return false;
-        } else if (!recId.equals(otherRecId))
-            return false;
-        return true;
+            return otherRecId == null;
+        }
+
+        return recId.equals(otherRecId);
     }
 
-    private static final String ENTRY_CATEGORY = "Entry"; //$NON-NLS-1$
+    private static final String ENTRY_CATEGORY = "Entry";
 
     public ObservableList<Item> getPropertySheetItems() {
         ObservableList<Item> items = FXCollections.observableArrayList();
@@ -1638,12 +1673,12 @@ public class Entry<T> implements Comparable<Entry<?>> {
 
             @Override
             public String getName() {
-                return "Calendar"; //$NON-NLS-1$
+                return "Calendar";
             }
 
             @Override
             public String getDescription() {
-                return "Calendar"; //$NON-NLS-1$
+                return "Calendar";
             }
 
             @Override
@@ -1676,12 +1711,12 @@ public class Entry<T> implements Comparable<Entry<?>> {
 
             @Override
             public String getName() {
-                return "Start time"; //$NON-NLS-1$
+                return "Start time";
             }
 
             @Override
             public String getDescription() {
-                return "Start time"; //$NON-NLS-1$
+                return "Start time";
             }
 
             @Override
@@ -1714,12 +1749,12 @@ public class Entry<T> implements Comparable<Entry<?>> {
 
             @Override
             public String getName() {
-                return "End time"; //$NON-NLS-1$
+                return "End time";
             }
 
             @Override
             public String getDescription() {
-                return "End time"; //$NON-NLS-1$
+                return "End time";
             }
 
             @Override
@@ -1752,12 +1787,12 @@ public class Entry<T> implements Comparable<Entry<?>> {
 
             @Override
             public String getName() {
-                return "Start date"; //$NON-NLS-1$
+                return "Start date";
             }
 
             @Override
             public String getDescription() {
-                return "Start date"; //$NON-NLS-1$
+                return "Start date";
             }
 
             @Override
@@ -1790,12 +1825,12 @@ public class Entry<T> implements Comparable<Entry<?>> {
 
             @Override
             public String getName() {
-                return "End date"; //$NON-NLS-1$
+                return "End date";
             }
 
             @Override
             public String getDescription() {
-                return "End date"; //$NON-NLS-1$
+                return "End date";
             }
 
             @Override
@@ -1828,12 +1863,12 @@ public class Entry<T> implements Comparable<Entry<?>> {
 
             @Override
             public String getName() {
-                return "Zone ID"; //$NON-NLS-1$
+                return "Zone ID";
             }
 
             @Override
             public String getDescription() {
-                return "Zone ID"; //$NON-NLS-1$
+                return "Zone ID";
             }
 
             @Override
@@ -1866,12 +1901,12 @@ public class Entry<T> implements Comparable<Entry<?>> {
 
             @Override
             public String getName() {
-                return "Title"; //$NON-NLS-1$
+                return "Title";
             }
 
             @Override
             public String getDescription() {
-                return "Title"; //$NON-NLS-1$
+                return "Title";
             }
 
             @Override
@@ -1904,12 +1939,12 @@ public class Entry<T> implements Comparable<Entry<?>> {
 
             @Override
             public String getName() {
-                return "Full Day"; //$NON-NLS-1$
+                return "Full Day";
             }
 
             @Override
             public String getDescription() {
-                return "Full Day"; //$NON-NLS-1$
+                return "Full Day";
             }
 
             @Override
@@ -1942,12 +1977,12 @@ public class Entry<T> implements Comparable<Entry<?>> {
 
             @Override
             public String getName() {
-                return "Location"; //$NON-NLS-1$
+                return "Location";
             }
 
             @Override
             public String getDescription() {
-                return "Geographic location (free text)"; //$NON-NLS-1$
+                return "Geographic location (free text)";
             }
 
             @Override
@@ -1980,12 +2015,12 @@ public class Entry<T> implements Comparable<Entry<?>> {
 
             @Override
             public String getName() {
-                return "Recurrence Rule"; //$NON-NLS-1$
+                return "Recurrence Rule";
             }
 
             @Override
             public String getDescription() {
-                return "RRULE"; //$NON-NLS-1$
+                return "RRULE";
             }
 
             @Override
@@ -2018,12 +2053,12 @@ public class Entry<T> implements Comparable<Entry<?>> {
 
             @Override
             public String getName() {
-                return "Minimum Duration"; //$NON-NLS-1$
+                return "Minimum Duration";
             }
 
             @Override
             public String getDescription() {
-                return "Minimum Duration"; //$NON-NLS-1$
+                return "Minimum Duration";
             }
 
             @Override

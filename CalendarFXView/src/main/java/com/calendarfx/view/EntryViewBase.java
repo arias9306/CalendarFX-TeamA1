@@ -16,30 +16,30 @@
 
 package com.calendarfx.view;
 
-import static java.util.Objects.requireNonNull;
-import static javafx.scene.control.SelectionMode.MULTIPLE;
-import static javafx.scene.input.MouseButton.PRIMARY;
-
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.Optional;
-
-import org.controlsfx.control.PropertySheet;
-import org.controlsfx.control.PropertySheet.Item;
-
 import com.calendarfx.model.Calendar;
 import com.calendarfx.model.Entry;
 import com.calendarfx.view.DateControl.EntryContextMenuParameter;
 import com.calendarfx.view.DateControl.EntryDetailsParameter;
-
+import com.calendarfx.view.DateControl.Layer;
+import com.calendarfx.view.DayViewBase.AvailabilityEditingEntryBehaviour;
+import com.calendarfx.view.DayViewBase.OverlapResolutionStrategy;
 import javafx.animation.ScaleTransition;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
@@ -53,17 +53,28 @@ import javafx.scene.CacheHint;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.InputEvent;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
 import javafx.util.Duration;
+import org.controlsfx.control.PropertySheet;
+import org.controlsfx.control.PropertySheet.Item;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.Optional;
+
+import static java.util.Objects.requireNonNull;
+import static javafx.scene.control.SelectionMode.MULTIPLE;
+import static javafx.scene.input.MouseButton.PRIMARY;
 
 /**
  * The base class for all views that are representing calendar entries. There
  * are specializations of this class for the {@link DayView}, the
  * {@link DetailedWeekView}, and the {@link MonthView}. Each date control class uses
  * their own entry factory to create entry view instances.
- * <p/>
+ * <p>
  * This view uses four pseudo classes:
  * <ul>
  * <li>dragged - when the user drags the view</li>
@@ -77,21 +88,19 @@ import javafx.util.Duration;
  * the opacity of the original entry view will be set to 0, which means the view
  * will be invisible.
  *
+ * @param <T> the type of date control where the entry is being used
  * @see DayView#entryViewFactoryProperty()
  * @see MonthView#entryViewFactoryProperty()
- *
- * @param <T>
- *            the type of date control where the entry is being used
  */
 public abstract class EntryViewBase<T extends DateControl> extends CalendarFXControl implements Comparable<EntryViewBase<T>> {
 
-    private static final PseudoClass DRAGGED_PSEUDO_CLASS = PseudoClass.getPseudoClass("dragged"); //$NON-NLS-1$
+    private static final PseudoClass DRAGGED_PSEUDO_CLASS = PseudoClass.getPseudoClass("dragged");
 
-    private static final PseudoClass DRAGGED_START_PSEUDO_CLASS = PseudoClass.getPseudoClass("dragged-start"); //$NON-NLS-1$
+    private static final PseudoClass DRAGGED_START_PSEUDO_CLASS = PseudoClass.getPseudoClass("dragged-start");
 
-    private static final PseudoClass DRAGGED_END_PSEUDO_CLASS = PseudoClass.getPseudoClass("dragged-end"); //$NON-NLS-1$
+    private static final PseudoClass DRAGGED_END_PSEUDO_CLASS = PseudoClass.getPseudoClass("dragged-end");
 
-    private static final PseudoClass SELECTED_PSEUDO_CLASS = PseudoClass.getPseudoClass("selected"); //$NON-NLS-1$
+    private static final PseudoClass SELECTED_PSEUDO_CLASS = PseudoClass.getPseudoClass("selected");
 
     private Entry<?> entry;
 
@@ -107,25 +116,32 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
 
     private final WeakListChangeListener<? super String> weakStyleListener = new WeakListChangeListener<>(styleListener);
 
+    private final InvalidationListener bindVisibilityListener = it -> bindVisibility();
+
+    private final WeakInvalidationListener weakBindVisibilityListener = new WeakInvalidationListener(bindVisibilityListener);
+
     /**
      * Constructs a new view for the given entry.
      *
-     * @param entry
-     *            the calendar entry
+     * @param entry the calendar entry
      */
     protected EntryViewBase(Entry<?> entry) {
-        this.entry = requireNonNull(entry);
+        setEntry(entry);
 
-        entry.getStyleClass().addListener(weakStyleListener);
         getStyleClass().addAll(entry.getStyleClass());
 
         setFocusTraversable(true);
 
         focusedProperty().addListener(it -> processFocus());
 
-        addEventHandler(MouseEvent.MOUSE_CLICKED, evt -> showDetails(evt, evt.getScreenX(), evt.getScreenY()));
-        addEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, evt -> {
+        addEventHandler(MouseEvent.MOUSE_CLICKED, evt -> {
+            if (evt.getButton().equals(PRIMARY) && evt.isStillSincePress() && evt.getClickCount() == getDetailsClickCount()) {
+                showDetails(evt, evt.getScreenX(), evt.getScreenY());
+            }
             evt.consume();
+        });
+
+        addEventHandler(ContextMenuEvent.CONTEXT_MENU_REQUESTED, evt -> {
             DateControl dateControl = getDateControl();
             if (dateControl != null) {
                 /*
@@ -137,8 +153,8 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
                     EntryContextMenuParameter param = new EntryContextMenuParameter(evt, dateControl, EntryViewBase.this);
                     ContextMenu menu = callback.call(param);
                     if (menu != null) {
-                        setContextMenu(menu);
-                        menu.show(EntryViewBase.this, evt.getScreenX(), evt.getScreenY());
+                        menu.show(getScene().getWindow(), evt.getScreenX(), evt.getScreenY());
+                        evt.consume();
                     }
                 }
             }
@@ -147,40 +163,40 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
         @SuppressWarnings("unchecked")
         MapChangeListener<? super Object, ? super Object> propertiesListener = change -> {
             if (change.wasAdded()) {
-                if (change.getKey().equals("startDate")) { //$NON-NLS-1$
+                if (change.getKey().equals("startDate")) {
                     setStartDate((LocalDate) change.getValueAdded());
-                } else if (change.getKey().equals("endDate")) { //$NON-NLS-1$
+                } else if (change.getKey().equals("endDate")) {
                     setEndDate((LocalDate) change.getValueAdded());
-                } else if (change.getKey().equals("startTime")) { //$NON-NLS-1$
+                } else if (change.getKey().equals("startTime")) {
                     setStartTime((LocalTime) change.getValueAdded());
-                } else if (change.getKey().equals("endTime")) { //$NON-NLS-1$
+                } else if (change.getKey().equals("endTime")) {
                     setEndTime((LocalTime) change.getValueAdded());
-                } else if (change.getKey().equals("position")) { //$NON-NLS-1$
+                } else if (change.getKey().equals("position")) {
                     setPosition((Position) change.getValueAdded());
-                } else if (change.getKey().equals("dragged")) { //$NON-NLS-1$
+                } else if (change.getKey().equals("dragged")) {
                     Boolean onOff = (Boolean) change.getValueAdded();
                     dragged.set(onOff);
-                    getProperties().remove("dragged"); //$NON-NLS-1$
-                } else if (change.getKey().equals("dragged-start")) { //$NON-NLS-1$
+                    getProperties().remove("dragged");
+                } else if (change.getKey().equals("dragged-start")) {
                     Boolean onOff = (Boolean) change.getValueAdded();
                     draggedStart.set(onOff);
-                    getProperties().remove("dragged-start"); //$NON-NLS-1$
-                } else if (change.getKey().equals("dragged-end")) { //$NON-NLS-1$
+                    getProperties().remove("dragged-start");
+                } else if (change.getKey().equals("dragged-end")) {
                     Boolean onOff = (Boolean) change.getValueAdded();
                     draggedEnd.set(onOff);
-                    getProperties().remove("dragged-end"); //$NON-NLS-1$
-                } else if (change.getKey().equals("selected")) { //$NON-NLS-1$
+                    getProperties().remove("dragged-end");
+                } else if (change.getKey().equals("selected")) {
                     Boolean onOff = (Boolean) change.getValueAdded();
                     selected.set(onOff);
-                    getProperties().remove("selected"); //$NON-NLS-1$
-                } else if (change.getKey().equals("hidden")) { //$NON-NLS-1$
+                    getProperties().remove("selected");
+                } else if (change.getKey().equals("hidden")) {
                     Boolean onOff = (Boolean) change.getValueAdded();
                     setHidden(onOff);
-                    getProperties().remove("hidden"); //$NON-NLS-1$
-                } else if (change.getKey().equals("control")) { //$NON-NLS-1$
+                    getProperties().remove("hidden");
+                } else if (change.getKey().equals("control")) {
                     T control = (T) change.getValueAdded();
                     setDateControl(control);
-                    getProperties().remove("control"); //$NON-NLS-1$
+                    getProperties().remove("control");
                 }
             }
         };
@@ -190,24 +206,20 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
         dateControlProperty().addListener((observable, oldControl, newControl) -> {
             if (oldControl != null) {
                 oldControl.getSelections().removeListener(weakSelectionListener);
-                oldControl.draggedEntriesProperty().removeListener(weakDraggedListener);
+                oldControl.draggedEntryProperty().removeListener(weakDraggedListener);
             }
             if (newControl != null) {
                 newControl.getSelections().addListener(weakSelectionListener);
-                newControl.draggedEntriesProperty().addListener(weakDraggedListener);
+                newControl.draggedEntryProperty().addListener(weakDraggedListener);
             }
 
             bindVisibility();
         });
 
         addEventHandler(KeyEvent.KEY_PRESSED, evt -> {
-            switch (evt.getCode()) {
-                case ENTER:
-                    Point2D localToScreen = localToScreen(0, 0);
-                    showDetails(evt, localToScreen.getX() + getWidth(), localToScreen.getY() + getHeight() / 2);
-                    break;
-                default:
-                    break;
+            if (evt.getCode() == KeyCode.ENTER) {
+                Point2D localToScreen = localToScreen(0, 0);
+                showDetails(evt, localToScreen.getX() + getWidth(), localToScreen.getY() + getHeight() / 2);
             }
         });
 
@@ -216,10 +228,42 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
             boolean contains = selections.contains(entry);
             selected.set(contains);
         });
-        
+
         addEventHandler(MouseEvent.MOUSE_PRESSED, this::performSelection);
 
-        bindEntry(entry);
+        bindEntry();
+        bindVisibility();
+
+        layerProperty().addListener(weakBindVisibilityListener);
+    }
+
+    public void setEntry(Entry<?> entry) {
+        this.entry = requireNonNull(entry);
+        this.entry.getStyleClass().addListener(weakStyleListener);
+        this.entry = entry;
+        bindEntry();
+        bindVisibility();
+    }
+
+    private final IntegerProperty detailsClickCount = new SimpleIntegerProperty(this, "detailsClickCount", 2);
+
+    public final int getDetailsClickCount() {
+        return detailsClickCount.get();
+    }
+
+    /**
+     * Determines the click count that is required to trigger the
+     * "show details" action.
+     *
+     * @return the "show details" click count
+     * @see DateControl#entryDetailsCallbackProperty()
+     */
+    public final IntegerProperty detailsClickCountProperty() {
+        return detailsClickCount;
+    }
+
+    public final void setDetailsClickCount(int detailsClickCount) {
+        this.detailsClickCount.set(detailsClickCount);
     }
 
     /**
@@ -231,11 +275,7 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
         return entry;
     }
 
-    private InvalidationListener calendarListener = it -> bindVisibility();
-
-    private WeakInvalidationListener weakCalendarListener = new WeakInvalidationListener(calendarListener);
-
-    private void bindEntry(Entry<?> entry) {
+    private void bindEntry() {
         setStartDate(entry.getStartDate());
         setEndDate(entry.getEndDate());
         setStartTime(entry.getStartTime());
@@ -246,20 +286,52 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
              * We want to make sure the dragged entry gets styled like a
              * selected entry.
              */
-            getProperties().put("selected", true); //$NON-NLS-1$
+            getProperties().put("selected", true);
         }
 
-        entry.calendarProperty().addListener(weakCalendarListener);
+        entry.hiddenProperty().addListener(weakBindVisibilityListener);
+        entry.calendarProperty().addListener(weakBindVisibilityListener);
     }
 
     private void bindVisibility() {
         Entry<?> entry = getEntry();
-        if (entry != null) {
+
+        T dateControl = getDateControl();
+
+        if (entry != null && dateControl != null) {
             Calendar calendar = entry.getCalendar();
-            if (calendar != null && getDateControl() != null) {
-                visibleProperty().bind(Bindings.and(getDateControl().getCalendarVisibilityProperty(calendar), Bindings.not(hiddenProperty())));
+
+            // the entry view can be hidden
+            BooleanBinding binding = Bindings.createBooleanBinding(() -> !isHidden(), hiddenProperty());
+
+            if (calendar != null) {
+                // the calendar can be hidden
+                binding = binding.and(dateControl.getCalendarVisibilityProperty(calendar));
             }
+
+            // the entry itself can also be hidden
+            binding = binding.and(entry.hiddenProperty().not());
+
+            if (getLayer() != null) {
+                binding = binding.and(Bindings.createBooleanBinding(this::isAssignedLayerVisible, dateControl.visibleLayersProperty()));
+            }
+
+            if (dateControl instanceof DayViewBase) {
+                /*
+                 * Day views support editing of an availability calendar. During editing the
+                 * entries might be shown, hidden, or become somewhat transparent.
+                 */
+                DayViewBase dayView = (DayViewBase) dateControl;
+
+                binding = binding.and(dayView.editAvailabilityProperty().not().or(dayView.entryViewAvailabilityEditingBehaviourProperty().isEqualTo(AvailabilityEditingEntryBehaviour.HIDE).not()));
+            }
+
+            visibleProperty().bind(binding);
         }
+    }
+
+    private boolean isAssignedLayerVisible() {
+        return getDateControl().visibleLayersProperty().contains(getLayer());
     }
 
     private boolean _hidden = false;
@@ -272,11 +344,11 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
      * {@link MonthView} where space is restricted).
      *
      * @return a read-only property used as a flag to signal whether the view is
-     *         hidden or not
+     * hidden or not
      */
     public final ReadOnlyBooleanProperty hiddenProperty() {
         if (hidden == null) {
-            hidden = new ReadOnlyBooleanWrapper(this, "hidden", _hidden); //$NON-NLS-1$
+            hidden = new ReadOnlyBooleanWrapper(this, "hidden", _hidden);
         }
         return hidden.getReadOnlyProperty();
     }
@@ -285,7 +357,7 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
      * Returns the value of {@link #hiddenProperty()}.
      *
      * @return true if the view is currently hidden because of insufficient
-     *         space
+     * space
      */
     public final boolean isHidden() {
         return hidden == null ? _hidden : hidden.get();
@@ -302,7 +374,7 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
     private void processFocus() {
         if (isFocused()) {
 
-            if (!getProperties().containsKey("disable-focus-handling")) { //$NON-NLS-1$
+            if (!getProperties().containsKey("disable-focus-handling")) {
                 DateControl control = getDateControl();
                 if (control != null) {
                     if (!control.getSelections().contains(getEntry())) {
@@ -323,48 +395,64 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
      * focus.
      */
     public final void bounce() {
-        ScaleTransition transition = new ScaleTransition(Duration.millis(200), this);
-        setCache(true);
-        setCacheHint(CacheHint.SCALE);
-        transition.setAutoReverse(true);
-        transition.setFromX(1);
-        transition.setToX(.8);
-        transition.setFromY(1);
-        transition.setToY(.8);
-        transition.setCycleCount(2);
-        transition.setOnFinished(evt -> setCache(false));
-        transition.play();
+        if (isEnableBounce()) {
+            ScaleTransition transition = new ScaleTransition(Duration.millis(200), this);
+            setCache(true);
+            setCacheHint(CacheHint.SCALE);
+            transition.setAutoReverse(true);
+            transition.setFromX(1);
+            transition.setToX(.8);
+            transition.setFromY(1);
+            transition.setToY(.8);
+            transition.setCycleCount(2);
+            transition.setOnFinished(evt -> setCache(false));
+            transition.play();
+        }
     }
 
-    private InvalidationListener selectionListener = it -> updateSelection();
+    private final BooleanProperty enableBounce = new SimpleBooleanProperty(this, "enableBounce", false);
 
-    private WeakInvalidationListener weakSelectionListener = new WeakInvalidationListener(selectionListener);
+    public final boolean isEnableBounce() {
+        return enableBounce.get();
+    }
 
-    private InvalidationListener draggedListener = it -> updateDragged();
+    /**
+     * Controls whether the entry should use a scale transition to bounce when it receives the
+     * focus. The default is false.
+     *
+     * @return true if the entry should bounce
+     */
+    public final BooleanProperty enableBounceProperty() {
+        return enableBounce;
+    }
 
-    private WeakInvalidationListener weakDraggedListener = new WeakInvalidationListener(draggedListener);
+    public final void setEnableBounce(boolean enableBounce) {
+        this.enableBounce.set(enableBounce);
+    }
+
+    private final InvalidationListener selectionListener = it -> updateSelection();
+
+    private final WeakInvalidationListener weakSelectionListener = new WeakInvalidationListener(selectionListener);
+
+    private final InvalidationListener draggedListener = it -> updateDragged();
+
+    private final WeakInvalidationListener weakDraggedListener = new WeakInvalidationListener(draggedListener);
 
     private void updateSelection() {
         DateControl control = getDateControl();
         if (control != null) {
             Entry<?> entry = getEntry();
 
-            if (control.getSelections().contains(entry)) {
-                selected.set(true);
-            } else {
-                selected.set(false);
-            }
+            selected.set(control.getSelections().contains(entry));
         }
     }
 
     private void updateDragged() {
         DateControl control = getDateControl();
         if (control != null) {
-            DraggedEntry draggedEntry = control.getDraggedEntries().stream()
-                    .filter(entryDrag -> entryDrag.getOriginalEntry().getId().equals(getEntry().getId()))
-                    .findFirst()
-                    .orElse(null);
-            if (draggedEntry != null && draggedEntry.getOriginalEntry().equals(getEntry())) {
+            DraggedEntry draggedEntry = control.getDraggedEntry();
+            if (draggedEntry != null) {
+                if (draggedEntry.getOriginalEntry().equals(getEntry())) {
                     switch (draggedEntry.getDragMode()) {
                         case END_TIME:
                             draggedEnd.set(true);
@@ -378,6 +466,11 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
                         default:
                             break;
                     }
+                } else {
+                    dragged.set(false);
+                    draggedStart.set(false);
+                    draggedEnd.set(false);
+                }
             } else {
                 dragged.set(false);
                 draggedStart.set(false);
@@ -395,7 +488,7 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
          */
         if (control != null && getParent() != null) {
             Callback<EntryDetailsParameter, Boolean> callback = control.getEntryDetailsCallback();
-            EntryDetailsParameter param = new EntryDetailsParameter(evt, control, getEntry(), getParent(), x, y);
+            EntryDetailsParameter param = new EntryDetailsParameter(evt, control, getEntry(), this, this, x, y);
             callback.call(param);
         }
     }
@@ -406,10 +499,10 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
      * view is shown on the "first" day, the "last" day, or some day in the
      * "middle" of the span. If the entry is located on only one day then the
      * position will be "only".
-     * <p/>
+     * <p>
      * The image below illustrates this concept:
-     * <p/>
-     * <center><img src="doc-files/multi-days.png"></center>
+     *
+     * <img src="doc-files/multi-days.png" alt="Multi Days">
      *
      * @see EntryViewBase#positionProperty()
      */
@@ -450,18 +543,17 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
      * "middle" of the span. If the entry is located on only one day then the
      * position will be "only". This property is read-only and will be set by
      * the framework.
-     * <p/>
+     * <p>
      * The image below illustrates this concept:
-     * <p/>
-     * <center><img src="doc-files/multi-days.png"></center>
-     * <p/>
+     *
+     * <img src="doc-files/multi-days.png" alt="Multi Day">
      *
      * @return the position of the view within the time range of the calendar
-     *         entry
+     * entry
      */
     public final ReadOnlyObjectProperty<Position> positionProperty() {
         if (position == null) {
-            position = new ReadOnlyObjectWrapper<>(this, "position", _position); //$NON-NLS-1$
+            position = new ReadOnlyObjectWrapper<>(this, "position", _position);
         }
         return position.getReadOnlyProperty();
     }
@@ -494,7 +586,7 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
      */
     public final ReadOnlyObjectProperty<T> dateControlProperty() {
         if (dateControl == null) {
-            dateControl = new ReadOnlyObjectWrapper<>(this, "dateControl", _dateControl); //$NON-NLS-1$
+            dateControl = new ReadOnlyObjectWrapper<>(this, "dateControl", _dateControl);
         }
 
         return dateControl.getReadOnlyProperty();
@@ -531,7 +623,7 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
      */
     public final ReadOnlyObjectProperty<LocalDate> startDateProperty() {
         if (startDate == null) {
-            startDate = new ReadOnlyObjectWrapper<>(this, "startDate", _startDate); //$NON-NLS-1$
+            startDate = new ReadOnlyObjectWrapper<>(this, "startDate", _startDate);
         }
         return startDate.getReadOnlyProperty();
     }
@@ -567,7 +659,7 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
      */
     public final ReadOnlyObjectProperty<LocalDate> endDateProperty() {
         if (endDate == null) {
-            endDate = new ReadOnlyObjectWrapper<>(this, "endDate", _endDate); //$NON-NLS-1$
+            endDate = new ReadOnlyObjectWrapper<>(this, "endDate", _endDate);
         }
 
         return endDate.getReadOnlyProperty();
@@ -602,7 +694,7 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
      */
     public final ReadOnlyObjectProperty<LocalTime> startTimeProperty() {
         if (startTime == null) {
-            startTime = new ReadOnlyObjectWrapper<>(this, "startTime", _startTime); //$NON-NLS-1$
+            startTime = new ReadOnlyObjectWrapper<>(this, "startTime", _startTime);
         }
         return startTime.getReadOnlyProperty();
     }
@@ -636,7 +728,7 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
      */
     public final ReadOnlyObjectProperty<LocalTime> endTimeProperty() {
         if (endTime == null) {
-            endTime = new ReadOnlyObjectWrapper<>(this, "endTime", _endTime); //$NON-NLS-1$
+            endTime = new ReadOnlyObjectWrapper<>(this, "endTime", _endTime);
         }
         return endTime.getReadOnlyProperty();
     }
@@ -676,7 +768,7 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
 
         @Override
         public String getName() {
-            return "dragged"; //$NON-NLS-1$
+            return "dragged";
         }
     };
 
@@ -717,7 +809,7 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
 
         @Override
         public String getName() {
-            return "draggedStart"; //$NON-NLS-1$
+            return "draggedStart";
         }
     };
 
@@ -759,7 +851,7 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
 
         @Override
         public String getName() {
-            return "draggedEnd"; //$NON-NLS-1$
+            return "draggedEnd";
         }
     };
 
@@ -801,7 +893,7 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
 
         @Override
         public String getName() {
-            return "selected"; //$NON-NLS-1$
+            return "selected";
         }
     };
 
@@ -809,9 +901,8 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
      * A flag used to indicate that the entry has been selected by the user.
      * This property triggers the "selected" pseudo class.
      *
-     * @see DateControl#getSelections()
-     *
      * @return true if the entry view has been selected
+     * @see DateControl#getSelections()
      */
     public final ReadOnlyBooleanProperty selectedProperty() {
         return selected.getReadOnlyProperty();
@@ -827,13 +918,192 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
     }
 
     /**
+     * Entry presentation layer.
+     */
+
+    private Layer _layer = Layer.BASE;
+
+    private ObjectProperty<Layer> layer;
+
+    /**
+     * Layer on which entry will be presented. For possible values please check {@link Layer}.
+     *
+     * @return the entry presentation layer
+     */
+    public final ObjectProperty<Layer> layerProperty() {
+        if (layer == null) {
+            layer = new SimpleObjectProperty<>(this, "layer", _layer);
+        }
+        return layer;
+    }
+
+    /**
+     * Returns the value of {@link #layerProperty()}.
+     *
+     * @return the entry presentation layer
+     */
+    public final Layer getLayer() {
+        return layer == null ? _layer : layer.get();
+    }
+
+    /**
+     * Sets the value of {@link #layerProperty()}.
+     *
+     * @param layer the entry presentation layer
+     */
+    public final void setLayer(Layer layer) {
+        if (this.layer == null) {
+            _layer = layer;
+        } else {
+            this.layer.set(layer);
+        }
+    }
+
+    /**
+     * Width percentage of entry view.
+     */
+
+    private Double _widthPercentage = 100.0;
+
+    private DoubleProperty widthPercentage;
+
+    /**
+     * A percentage value used to specify how much of the available width inside the
+     * view will be utilized by the entry views. The default value is 100%, however
+     * applications might want to set a smaller value to allow the user to click and
+     * create new entries in already used time intervals.
+     * <p>
+     * Width percentage is only used for width computation when {@link #prefWidthProperty()}
+     * of view entry has no defined value and when {@link #alignmentStrategyProperty()}
+     * is not {@link AlignmentStrategy#FILL}.
+     * </p>
+     *
+     * @return the entry percentage width
+     */
+    public final DoubleProperty widthPercentageProperty() {
+        if (widthPercentage == null) {
+            widthPercentage = new SimpleDoubleProperty(this, "widthPercentage", _widthPercentage) {
+                @Override
+                public void set(double percentage) {
+                    validateWidthPercentageProperty(percentage);
+                    super.set(percentage);
+                }
+            };
+        }
+        return widthPercentage;
+    }
+
+    /**
+     * Returns the value of {@link #widthPercentageProperty()}.
+     *
+     * @return the entry percentage width
+     */
+    public double getWidthPercentage() {
+        return widthPercentage == null ? _widthPercentage : widthPercentage.get();
+    }
+
+    /**
+     * Sets the value of {@link #widthPercentage}.
+     *
+     * @param widthPercentage the new entry percentage width
+     */
+    public final void setWidthPercentage(double widthPercentage) {
+        if (this.widthPercentage == null) {
+            validateWidthPercentageProperty(widthPercentage);
+            _widthPercentage = widthPercentage;
+        } else {
+            this.widthPercentage.set(widthPercentage);
+        }
+    }
+
+    private void validateWidthPercentageProperty(double newValue) {
+        if (newValue < 0.0 || newValue > 100.0) {
+            throw new IllegalArgumentException("percentage width must be between 0 and 100 but was " + newValue);
+        }
+    }
+
+    /**
+     * Different strategies for determining the height of an entry view. Normally
+     * the height of an entry is based on its start and end times. But sometimes
+     * we might want to simply use the start time for its location and the required
+     * height based on its content (e.g. the labels inside the entry view). The layout
+     * strategy {@link HeightLayoutStrategy#COMPUTE_PREF_SIZE} disables changes to the end
+     * time of the entry as the bottom y coordinate of the view would not accurately
+     * represent the end time of the entry.
+     *
+     * @see DayViewBase#setOverlapResolutionStrategy(OverlapResolutionStrategy)
+     */
+    public enum HeightLayoutStrategy {
+        USE_START_AND_END_TIME,
+        COMPUTE_PREF_SIZE,
+    }
+
+    private final ObjectProperty<HeightLayoutStrategy> heightLayoutStrategy = new SimpleObjectProperty<>(this, "heightLayoutStrategy", HeightLayoutStrategy.USE_START_AND_END_TIME);
+
+    public final HeightLayoutStrategy getHeightLayoutStrategy() {
+        return heightLayoutStrategy.get();
+    }
+
+    /**
+     * Stores the height layout strategy that will be used for this entry view. For
+     * more information see {@link HeightLayoutStrategy}.
+     *
+     * @return the entry view's height layout strategy
+     */
+    public final ObjectProperty<HeightLayoutStrategy> heightLayoutStrategyProperty() {
+        return heightLayoutStrategy;
+    }
+
+    public final void setHeightLayoutStrategy(HeightLayoutStrategy heightLayoutStrategy) {
+        this.heightLayoutStrategy.set(heightLayoutStrategy);
+    }
+
+    /**
+     * Different strategies for aligning the entry view inside its day view. Normally
+     * an entry view fills the entire width of a {@link DayView} but special cases might
+     * require the entry to simply use the preferred width of the view and align the
+     * entry's view on the left, the center, or the middle.
+     * <p>
+     * If the time intervals of two entries are overlapping then the entries might
+     * be placed in two columns. The alignment strategy would then determine the layout
+     * of the entry within its column.
+     * </p>
+     *
+     * @see #setAlignmentStrategy(AlignmentStrategy)
+     */
+    public enum AlignmentStrategy {
+        FILL,
+        ALIGN_LEFT,
+        ALIGN_RIGHT,
+        ALIGN_CENTER
+    }
+
+    private final ObjectProperty<AlignmentStrategy> alignmentStrategy = new SimpleObjectProperty<>(this, "alignmentStrategy", AlignmentStrategy.FILL);
+
+    public final AlignmentStrategy getAlignmentStrategy() {
+        return alignmentStrategy.get();
+    }
+
+    /**
+     * Stores the alignment strategy that will be used for this entry view. For
+     * more information see {@link AlignmentStrategy}.
+     *
+     * @return the entry view's alignment strategy
+     */
+    public final ObjectProperty<AlignmentStrategy> alignmentStrategyProperty() {
+        return alignmentStrategy;
+    }
+
+    public final void setAlignmentStrategy(AlignmentStrategy alignmentStrategy) {
+        this.alignmentStrategy.set(alignmentStrategy);
+    }
+
+    /**
      * Convenience method to check if this entry view intersects with the given
      * entry view. Delegates to {@link Entry#intersects(Entry)}.
      *
-     * @param otherView
-     *            the other view to check
-     * @return true if the time intervals of the two entries / views overlap
-     *         each other
+     * @param otherView the other view to check
+     * @return true if the time intervals of the two entries / views overlap each other
      */
     public final boolean intersects(EntryViewBase<?> otherView) {
         return getEntry().intersects(otherView.getEntry());
@@ -862,11 +1132,10 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
 
     @Override
     public String toString() {
-        return "EntryViewBase [entry=" + getEntry() + ", selected=" //$NON-NLS-1$ //$NON-NLS-2$
-                + isSelected() + "]"; //$NON-NLS-1$
+        return "EntryViewBase [entry=" + getEntry() + ", selected=" + isSelected() + "]";
     }
 
-    private static final String ENTRY_VIEW_CATEGORY = "Entry View Base"; //$NON-NLS-1$
+    private static final String ENTRY_VIEW_CATEGORY = "Entry View Base";
 
     /**
      * Returns a list of property items that can be shown by the
@@ -874,7 +1143,6 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
      *
      * @return the property sheet items
      */
-    @Override
     public ObservableList<Item> getPropertySheetItems() {
 
         ObservableList<Item> items = FXCollections.observableArrayList();
@@ -903,12 +1171,12 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
 
             @Override
             public String getName() {
-                return "Position"; //$NON-NLS-1$
+                return "Position";
             }
 
             @Override
             public String getDescription() {
-                return "Position (first, last, middle, only)"; //$NON-NLS-1$
+                return "Position (first, last, middle, only)";
             }
 
             @Override
@@ -941,12 +1209,12 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
 
             @Override
             public String getName() {
-                return "Selected"; //$NON-NLS-1$
+                return "Selected";
             }
 
             @Override
             public String getDescription() {
-                return "Selected"; //$NON-NLS-1$
+                return "Selected";
             }
 
             @Override
@@ -963,24 +1231,31 @@ public abstract class EntryViewBase<T extends DateControl> extends CalendarFXCon
             String disableFocusHandlingKey = "disable-focus-handling";
             getProperties().put(disableFocusHandlingKey, true);
             requestFocus();
-            
+
             DateControl control = getDateControl();
-            
+
+            if (control == null) {
+                return;
+            }
+
             if (!isMultiSelect(evt) && !control.getSelections().contains(entry)) {
                 control.clearSelection();
             }
-            
-            if(isMultiSelect(evt) && control.getSelections().contains(entry))
+
+            if (isMultiSelect(evt) && control.getSelections().contains(entry)) {
                 control.deselect(entry);
-            else if (!control.getSelections().contains(entry))
-                control.select(entry);
-            
+            } else {
+                control.getSelections().add(entry);
+            }
+
             getProperties().remove(disableFocusHandlingKey);
+
+            evt.consume();
         }
     }
-    
+
     private boolean isMultiSelect(MouseEvent evt) {
         return (evt.isShiftDown() || evt.isShortcutDown()) && getDateControl().getSelectionMode().equals(MULTIPLE);
     }
-    
+
 }

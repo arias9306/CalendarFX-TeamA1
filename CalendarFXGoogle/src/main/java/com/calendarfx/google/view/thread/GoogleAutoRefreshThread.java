@@ -23,7 +23,7 @@ import com.google.common.base.Preconditions;
 
 /**
  * Thread that performs the automatic refreshing.
- * <p>
+ *
  * Created by gdiaz on 5/05/2017.
  */
 public class GoogleAutoRefreshThread extends Thread {
@@ -107,8 +107,8 @@ public class GoogleAutoRefreshThread extends Thread {
 
         EVERY_30_MINUTES(1000 * 60 * 30, "Every 30 Minutes");
 
-        private long time;
-        private String name;
+        private final long time;
+        private final String name;
 
         RefreshInterval(long time, String name) {
             this.time = time;

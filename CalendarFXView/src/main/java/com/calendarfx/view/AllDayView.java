@@ -17,8 +17,8 @@
 package com.calendarfx.view;
 
 import com.calendarfx.model.Entry;
-import com.calendarfx.util.Util;
 import impl.com.calendarfx.view.AllDayViewSkin;
+import impl.com.calendarfx.view.util.Util;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
@@ -56,31 +56,29 @@ import static java.util.Objects.requireNonNull;
  * showing "full day" calendar entries. This view can be configured to span a
  * given number of days. One day is sufficient when used with a {@link DayView}
  * and seven days when used with a {@link DetailedWeekView}.
- * <p/>
- * <center><img src="doc-files/all-day-view.png"></center>
+ *
+ * <img src="doc-files/all-day-view.png" alt="All Day View">
  *
  * @see Entry#isFullDay()
  */
 public class AllDayView extends DateControl implements ZonedDateTimeProvider {
 
-    private static final String ALL_DAY_VIEW = "all-day-view"; //$NON-NLS-1$
+    private static final String ALL_DAY_VIEW = "all-day-view";
 
     /**
      * Constructs a new view for the given number of days.
      *
-     * @param numberOfDays
-     *            the number of days to be shown by this view
+     * @param numberOfDays the number of days to be shown by this view
      */
     public AllDayView(int numberOfDays) {
         if (numberOfDays <= 0) {
-            throw new IllegalArgumentException(
-                    "number of days must be larger than zero"); //$NON-NLS-1$
+            throw new IllegalArgumentException("number of days must be larger than zero");
         }
 
         getStyleClass().add(ALL_DAY_VIEW);
         setNumberOfDays(numberOfDays);
 
-        new CreateDeleteHandler(this);
+        new CreateAndDeleteHandler(this);
     }
 
     /**
@@ -91,7 +89,7 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
     }
 
     @Override
-    public final ZonedDateTime getZonedDateTimeAt(double x, double y) {
+    public final ZonedDateTime getZonedDateTimeAt(double x, double y, ZoneId zoneId) {
         int day = (int) (x / (getWidth() / getNumberOfDays()));
 
         LocalDate date = getDate();
@@ -103,7 +101,6 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
         date = date.plusDays(day);
 
         LocalTime time = LocalTime.NOON;
-        ZoneId zoneId = getZoneId();
         return ZonedDateTime.of(date, time, zoneId);
     }
 
@@ -123,8 +120,7 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
      */
     public final ObjectProperty<Insets> extraPaddingProperty() {
         if (extraPadding == null) {
-            extraPadding = new StyleableObjectProperty<Insets>(new Insets(2, 0,
-                    9, 0)) {
+            extraPadding = new StyleableObjectProperty<>(new Insets(2, 0, 9, 0)) {
 
                 @Override
                 public CssMetaData<AllDayView, Insets> getCssMetaData() {
@@ -138,7 +134,7 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
 
                 @Override
                 public String getName() {
-                    return "extraPadding"; //$NON-NLS-1$
+                    return "extraPadding";
                 }
             };
         }
@@ -158,8 +154,7 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
     /**
      * Sets the value of {@link #extraPaddingProperty()}.
      *
-     * @param padding
-     *            padding insets
+     * @param padding padding insets
      */
     public final void setExtraPadding(Insets padding) {
         requireNonNull(padding);
@@ -190,7 +185,7 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
 
                 @Override
                 public String getName() {
-                    return "rowHeight"; //$NON-NLS-1$
+                    return "rowHeight";
                 }
             };
         }
@@ -210,8 +205,7 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
     /**
      * Sets the value of the {@link #rowHeightProperty()}.
      *
-     * @param height
-     *            the new row height
+     * @param height the new row height
      */
     public final void setRowHeight(double height) {
         rowHeightProperty().set(height);
@@ -240,7 +234,7 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
 
                 @Override
                 public String getName() {
-                    return "rowSpacing"; //$NON-NLS-1$
+                    return "rowSpacing";
                 }
             };
         }
@@ -260,13 +254,11 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
     /**
      * Sets the value of {@link #rowSpacingProperty()}.
      *
-     * @param space
-     *            the space between rows in pixel
+     * @param space the space between rows in pixel
      */
     public final void setRowSpacing(double space) {
         if (space < 0) {
-            throw new IllegalArgumentException(
-                    "row spacing can not be smaller than zero"); //$NON-NLS-1$
+            throw new IllegalArgumentException("row spacing can not be smaller than zero");
         }
         rowSpacingProperty().set(space);
     }
@@ -294,7 +286,7 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
 
                 @Override
                 public String getName() {
-                    return "columnSpacing"; //$NON-NLS-1$
+                    return "columnSpacing";
                 }
             };
         }
@@ -314,15 +306,13 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
     /**
      * Sets the value of {@link #columnSpacingProperty()}.
      *
-     * @param space
-     *            the space between columns in pixel
+     * @param space the space between columns in pixel
      */
     public final void setColumnSpacing(double space) {
         columnSpacingProperty().set(space);
     }
 
-    private final BooleanProperty adjustToFirstDayOfWeek = new SimpleBooleanProperty(
-            this, "adjustToFirstDayOfWeek", true); //$NON-NLS-1$
+    private final BooleanProperty adjustToFirstDayOfWeek = new SimpleBooleanProperty(this, "adjustToFirstDayOfWeek", true);
 
     /**
      * A flag used to indicate that the view should always show the first day of
@@ -350,15 +340,13 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
     /**
      * Sets the value of {@link #adjustToFirstDayOfWeekProperty()}.
      *
-     * @param adjust
-     *            if true the view will always show the first day of the week
+     * @param adjust if true the view will always show the first day of the week
      */
     public final void setAdjustToFirstDayOfWeek(boolean adjust) {
         adjustToFirstDayOfWeekProperty().set(adjust);
     }
 
-    private final IntegerProperty numberOfDays = new SimpleIntegerProperty(
-            this, "numberOfDays"); //$NON-NLS-1$
+    private final IntegerProperty numberOfDays = new SimpleIntegerProperty(this, "numberOfDays");
 
     /**
      * Stores the number of days that will be shown by this view. This value
@@ -383,21 +371,17 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
     /**
      * Sets the value of {@link #numberOfDaysProperty()}.
      *
-     * @param number
-     *            the new number of days shown by the view
+     * @param number the new number of days shown by the view
      */
     public final void setNumberOfDays(int number) {
         if (number < 1) {
-            throw new IllegalArgumentException(
-                    "invalid number of days, must be larger than 0 but was " //$NON-NLS-1$
-                            + number);
+            throw new IllegalArgumentException("invalid number of days, must be larger than 0 but was " + number);
         }
 
         numberOfDaysProperty().set(number);
     }
 
-    private final ObjectProperty<Callback<Entry<?>, AllDayEntryView>> entryViewFactory = new SimpleObjectProperty<>(
-            this, "entryViewFactory", AllDayEntryView::new); //$NON-NLS-1$
+    private final ObjectProperty<Callback<Entry<?>, AllDayEntryView>> entryViewFactory = new SimpleObjectProperty<>(this, "entryViewFactory", AllDayEntryView::new);
 
     /**
      * A callback used for producing views for entries. The views have to be of
@@ -423,10 +407,33 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
      *
      * @param factory the new entry view factory
      */
-    public final void setEntryViewFactory(
-            Callback<Entry<?>, AllDayEntryView> factory) {
+    public final void setEntryViewFactory(Callback<Entry<?>, AllDayEntryView> factory) {
         requireNonNull(factory);
         entryViewFactoryProperty().set(factory);
+    }
+
+    private final ObjectProperty<Callback<AllDayView, Region>> separatorFactory = new SimpleObjectProperty<>(this, "separatorFactory", it -> {
+        Region region = new Region();
+        region.getStyleClass().add("weekday-separator");
+        return region;
+    });
+
+
+    public final Callback<AllDayView, Region> getSeparatorFactory() {
+        return separatorFactory.get();
+    }
+
+    /**
+     * A factory used for creating (optional) vertical separators between the all day view.
+     *
+     * @return the separator factory
+     */
+    public final ObjectProperty<Callback<AllDayView, Region>> separatorFactoryProperty() {
+        return separatorFactory;
+    }
+
+    public final void setSeparatorFactory(Callback<AllDayView, Region> separatorFactory) {
+        this.separatorFactory.set(separatorFactory);
     }
 
     private static class StyleableProperties {
@@ -434,7 +441,7 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
 
         private static final CssMetaData<AllDayView, Number> ROW_HEIGHT = new CssMetaData<AllDayView, Number>(
-                "-fx-row-height", StyleConverter.getSizeConverter(), 20d) { //$NON-NLS-1$
+                "-fx-row-height", StyleConverter.getSizeConverter(), 20d) {
 
             @Override
             public Double getInitialValue(AllDayView node) {
@@ -454,7 +461,7 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
         };
 
         private static final CssMetaData<AllDayView, Number> ROW_SPACING = new CssMetaData<AllDayView, Number>(
-                "-fx-row-spacing", StyleConverter.getSizeConverter(), 2d) { //$NON-NLS-1$
+                "-fx-row-spacing", StyleConverter.getSizeConverter(), 2d) {
 
             @Override
             public Double getInitialValue(AllDayView node) {
@@ -474,7 +481,7 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
         };
 
         private static final CssMetaData<AllDayView, Number> COLUMN_SPACING = new CssMetaData<AllDayView, Number>(
-                "-fx-column-spacing", StyleConverter.getSizeConverter(), 2d) { //$NON-NLS-1$
+                "-fx-column-spacing", StyleConverter.getSizeConverter(), 2d) {
 
             @Override
             public Double getInitialValue(AllDayView node) {
@@ -494,7 +501,7 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
         };
 
         private static final CssMetaData<AllDayView, Insets> EXTRA_PADDING = new CssMetaData<AllDayView, Insets>(
-                "-fx-extra-padding", StyleConverter.getInsetsConverter(), //$NON-NLS-1$
+                "-fx-extra-padding", StyleConverter.getInsetsConverter(),
                 Insets.EMPTY) {
 
             @Override
@@ -565,12 +572,12 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
 
             @Override
             public String getName() {
-                return "Number Of Days"; //$NON-NLS-1$
+                return "Number Of Days";
             }
 
             @Override
             public String getDescription() {
-                return "Determines how many days will be covered by this control"; //$NON-NLS-1$
+                return "Determines how many days will be covered by this control";
             }
 
             @Override
@@ -605,12 +612,12 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
 
             @Override
             public String getName() {
-                return "Column Spacing"; //$NON-NLS-1$
+                return "Column Spacing";
             }
 
             @Override
             public String getDescription() {
-                return "The gap between the days / columns"; //$NON-NLS-1$
+                return "The gap between the days / columns";
             }
 
             @Override
@@ -645,12 +652,12 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
 
             @Override
             public String getName() {
-                return "Row Height"; //$NON-NLS-1$
+                return "Row Height";
             }
 
             @Override
             public String getDescription() {
-                return "The height of each row in the control"; //$NON-NLS-1$
+                return "The height of each row in the control";
             }
 
             @Override
@@ -685,12 +692,12 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
 
             @Override
             public String getName() {
-                return "Row Spacing"; //$NON-NLS-1$
+                return "Row Spacing";
             }
 
             @Override
             public String getDescription() {
-                return "The gap between the rows"; //$NON-NLS-1$
+                return "The gap between the rows";
             }
 
             @Override
@@ -725,12 +732,12 @@ public class AllDayView extends DateControl implements ZonedDateTimeProvider {
 
             @Override
             public String getName() {
-                return "Extra Padding"; //$NON-NLS-1$
+                return "Extra Padding";
             }
 
             @Override
             public String getDescription() {
-                return "Additional padding inside the control"; //$NON-NLS-1$
+                return "Additional padding inside the control";
             }
 
             @Override

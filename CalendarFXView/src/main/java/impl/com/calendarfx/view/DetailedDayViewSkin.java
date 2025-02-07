@@ -23,7 +23,6 @@ import com.calendarfx.view.DateControl;
 import com.calendarfx.view.DayView;
 import com.calendarfx.view.DetailedDayView;
 import com.calendarfx.view.Messages;
-import com.calendarfx.view.RequestEvent;
 import com.calendarfx.view.TimeScaleView;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
@@ -39,7 +38,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 
-import static impl.com.calendarfx.view.ViewHelper.scrollToRequestedTime;
+import static com.calendarfx.util.ViewHelper.scrollToRequestedTime;
 
 public class DetailedDayViewSkin extends DateControlSkin<DetailedDayView> {
 
@@ -67,21 +66,22 @@ public class DetailedDayViewSkin extends DateControlSkin<DetailedDayView> {
         // the day view (scroll pane)
         DayView dayView = view.getDayView();
         dayViewScrollPane = new DayViewScrollPane(dayView, scrollBar);
-        dayViewScrollPane.getStyleClass().addAll("calendar-scroll-pane", "day-view-scroll-pane"); //$NON-NLS-1$
+        dayViewScrollPane.getStyleClass().addAll("calendar-scroll-pane", "day-view-scroll-pane");
 
-        // the time scale
+        // the timescale
         TimeScaleView timeScale = view.getTimeScaleView();
         Bindings.bindBidirectional(timeScale.translateYProperty(), dayView.translateYProperty());
 
         // the all-day view
         allDayView = view.getAllDayView();
+        allDayView.showTodayProperty().unbindBidirectional(view.showTodayProperty());
         allDayView.setShowToday(false);
         allDayView.setAdjustToFirstDayOfWeek(false);
 
         // all day label
-        allDayLabel = new Label(Messages.getString("DetailedDayViewSkin.ALL_DAY")); //$NON-NLS-1$
+        allDayLabel = new Label(Messages.getString("DetailedDayViewSkin.ALL_DAY"));
         allDayLabel.setTextOverrun(OverrunStyle.CLIP);
-        allDayLabel.getStyleClass().add("all-day-label"); //$NON-NLS-1$
+        allDayLabel.getStyleClass().add("all-day-label");
         allDayLabel.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
         // all day filler
@@ -90,7 +90,8 @@ public class DetailedDayViewSkin extends DateControlSkin<DetailedDayView> {
 
         // time scale scroll pane
         timeScaleScrollPane = new DayViewScrollPane(timeScale, scrollBar);
-        timeScaleScrollPane.getStyleClass().addAll("calendar-scroll-pane", "day-view-timescale-scroll-pane"); //$NON-NLS-1$
+        timeScaleScrollPane.getStyleClass().addAll("calendar-scroll-pane", "day-view-timescale-scroll-pane");
+        timeScaleScrollPane.setMinWidth(Region.USE_PREF_SIZE);
 
         // separator
         separator = new Separator(Orientation.VERTICAL);
@@ -106,7 +107,6 @@ public class DetailedDayViewSkin extends DateControlSkin<DetailedDayView> {
         calendarHeaderView.visibleProperty().bind(view.layoutProperty().isEqualTo(DateControl.Layout.SWIMLANE));
 
         agendaView = view.getAgendaView();
-        agendaView.addEventHandler(RequestEvent.REQUEST_ENTRY, evt -> dayView.showEntry(evt.getEntry()));
 
         RowConstraints row0 = new RowConstraints();
         row0.setFillHeight(true);

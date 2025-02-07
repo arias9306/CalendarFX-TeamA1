@@ -26,8 +26,8 @@ import javafx.scene.control.Skin;
 
 /**
  * A control for choosing a calendar from a list of calendars.
- * <p/>
- * <center><img src="doc-files/calendar-selector.png"></center>
+ *
+ * <img src="doc-files/calendar-selector.png" alt="Calendar Selector">
  */
 public class CalendarSelector extends CalendarFXControl {
 
@@ -56,7 +56,7 @@ public class CalendarSelector extends CalendarFXControl {
     /*
      * Support for value.
      */
-    private final ObjectProperty<Calendar> calendar = new SimpleObjectProperty<>(this, "calendar"); //$NON-NLS-1$
+    private final ObjectProperty<Calendar> calendar = new SimpleObjectProperty<>(this, "calendar");
 
     /**
      * A property used to store the current value of the control, the currently

@@ -49,9 +49,9 @@ public class AllDayEntryViewSkin extends SkinBase<AllDayEntryView> {
         getChildren().addAll(titleLabel);
     }
 
-    private InvalidationListener updateViewListener = it -> updateView();
+    private final InvalidationListener updateViewListener = it -> updateView();
 
-    private WeakInvalidationListener weakUpdateViewListener = new WeakInvalidationListener(updateViewListener);
+    private final WeakInvalidationListener weakUpdateViewListener = new WeakInvalidationListener(updateViewListener);
 
     protected void updateView() {
         final AllDayEntryView view = getSkinnable();
@@ -79,11 +79,12 @@ public class AllDayEntryViewSkin extends SkinBase<AllDayEntryView> {
         titleLabel.setText(entry.getTitle());
 
         view.getStyleClass().add("default-style-entry-small-only");
+        view.getStyleClass().addAll(entry.getStyleClass());
     }
 
     @Override
     protected void layoutChildren(double contentX, double contentY, double contentWidth, double contentHeight) {
-        titleLabel.resizeRelocate(snapPosition(contentX), snapPosition(contentY), snapSize(contentWidth), snapSize(contentHeight));
+        titleLabel.resizeRelocate(snapPositionX(contentX), snapPositionY(contentY), snapSizeX(contentWidth), snapSizeY(contentHeight));
     }
 
     @Override

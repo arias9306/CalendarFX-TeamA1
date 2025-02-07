@@ -31,6 +31,7 @@ import javafx.scene.image.ImageView;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import net.fortuna.ical4j.util.MapTimeZoneCache;
 import org.controlsfx.dialog.ProgressDialog;
 
 import java.time.LocalDate;
@@ -49,11 +50,12 @@ public class ICalCalendarApp extends Application {
             });
 
     @Override
-    public void start(Stage primaryStage) throws Exception {
+    public void start(Stage primaryStage) {
         LoggingDomain.CONFIG.info("Java version: " + System.getProperty("java.version"));
 
         System.setProperty("ical4j.unfolding.relaxed", "true");
         System.setProperty("ical4j.parsing.relaxed", "true");
+        System.setProperty("net.fortuna.ical4j.timezone.cache.impl", MapTimeZoneCache.class.getName());
 
         CalendarView calendarView = new CalendarView();
         calendarView.setToday(LocalDate.now());
@@ -103,7 +105,7 @@ public class ICalCalendarApp extends Application {
         calendarView.setCalendarSourceFactory(new ICalWebSourceFactory(primaryStage));
         calendarView.getCalendarSources().setAll(ICalRepository.familyCalendars, ICalRepository.communityCalendars);
 
-        Task<Void> task = new Task<Void>() {
+        Task<Void> task = new Task<>() {
 
             @Override
             protected Void call() throws Exception {

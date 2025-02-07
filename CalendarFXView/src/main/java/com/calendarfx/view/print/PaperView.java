@@ -37,7 +37,7 @@ import javafx.scene.control.Skin;
  * A control for specifying the paper size, the view type (day, week, month),
  * and the print margins. The default style class of this view is "paper-view".
  *
- * <center><img src="doc-files/paper-view.png"></center>
+ * <img src="doc-files/paper-view.png" alt="Paper View">
  */
 public class PaperView extends ViewTypeControl {
 

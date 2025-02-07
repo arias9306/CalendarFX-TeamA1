@@ -40,14 +40,14 @@ import static java.util.Objects.requireNonNull;
  * A view used for showing the short names of calendars on top of those
  * {@link DayView} instances that are using the {@link Layout#SWIMLANE} layout
  * strategy.
- * <p/>
- * <center><img width="100%" src="doc-files/calendar-header-view.png"></center>
+ *
+ * <img width="100%" src="doc-files/calendar-header-view.png" alt="Calendar Header View">
  *
  * @see DetailedWeekView#getCalendarHeaderView()
  */
 public class CalendarHeaderView extends CalendarFXControl {
 
-    private static final String DEFAULT_STYLE_CLASS = "calendar-header"; //$NON-NLS-1$
+    private static final String DEFAULT_STYLE_CLASS = "calendar-header";
 
     /**
      * Constructs a new calendar header view.
@@ -74,6 +74,9 @@ public class CalendarHeaderView extends CalendarFXControl {
     }
 
     public final void unbind(DateControl dateControl) {
+        // important, otherwise we end up with a memory leak
+        getCalendarVisibilityMap().clear();
+
         Bindings.unbindContentBidirectional(calendars, dateControl.getCalendars());
         Bindings.unbindContentBidirectional(calendarVisibilityMap, dateControl.getCalendarVisibilityMap());
     }
@@ -98,7 +101,7 @@ public class CalendarHeaderView extends CalendarFXControl {
         prop.set(visible);
     }
 
-    private final ObjectProperty<Callback<Calendar, Node>> cellFactory = new SimpleObjectProperty<>(this, "cellFactory"); //$NON-NLS-1$
+    private final ObjectProperty<Callback<Calendar, Node>> cellFactory = new SimpleObjectProperty<>(this, "cellFactory");
 
     /**
      * Returns the property used for storing a reference to a cell factory that
@@ -141,7 +144,7 @@ public class CalendarHeaderView extends CalendarFXControl {
         return calendars;
     }
 
-    private final IntegerProperty numberOfDays = new SimpleIntegerProperty(this, "numberOfDays", 1); //$NON-NLS-1$
+    private final IntegerProperty numberOfDays = new SimpleIntegerProperty(this, "numberOfDays", 1);
 
     /**
      * Stores the number of days that will be shown by this view. This value
@@ -173,7 +176,7 @@ public class CalendarHeaderView extends CalendarFXControl {
      */
     public final void setNumberOfDays(int number) {
         if (number < 1) {
-            throw new IllegalArgumentException("invalid number of days, must be larger than 0 but was " //$NON-NLS-1$
+            throw new IllegalArgumentException("invalid number of days, must be larger than 0 but was "
                     + number);
         }
 

@@ -21,8 +21,6 @@ import com.calendarfx.view.MonthSheetView;
 import com.calendarfx.view.MonthSheetView.ClickBehaviour;
 import com.calendarfx.view.YearView;
 import com.calendarfx.view.print.ViewType;
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
-import de.jensd.fx.glyphs.fontawesome.utils.FontAwesomeIconFactory;
 import impl.com.calendarfx.view.page.YearPageSkin;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
@@ -33,8 +31,9 @@ import javafx.scene.Node;
 import javafx.scene.control.Skin;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.Tooltip;
-import javafx.scene.text.Text;
 import org.controlsfx.control.PropertySheet;
+import org.kordamp.ikonli.fontawesome.FontAwesome;
+import org.kordamp.ikonli.javafx.FontIcon;
 
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
@@ -47,21 +46,21 @@ import java.util.Optional;
  * application can switch between these two views by calling {@link #setDisplayMode(DisplayMode)}.
  *
  * <h3>YearView</h3>
- * <center><img width="100%" src="doc-files/year-page.png"></center>
+ * <img width="100%" src="doc-files/year-page.png" alt="Year Page">
  * <h3>MonthSheetView</h3>
- * <center><img width="100%" src="doc-files/year-page-2.png"></center>
+ * <img width="100%" src="doc-files/year-page-2.png" alt="Year Page 2">
  */
 public class YearPage extends PageBase {
 
-    private YearView yearView;
-    private MonthSheetView monthSheetView;
-    private ToggleButton displayModeButton;
+    private final YearView yearView;
+    private final MonthSheetView monthSheetView;
+    private final ToggleButton displayModeButton;
 
     /**
      * Constructs a new year page.
      */
     public YearPage() {
-        getStyleClass().add("year-page"); //$NON-NLS-1$
+        getStyleClass().add("year-page");
 
         this.yearView = new YearView();
 
@@ -74,11 +73,12 @@ public class YearPage extends PageBase {
 
         Bindings.bindBidirectional(monthSheetView.showTodayProperty(), showTodayProperty());
 
-        setDateTimeFormatter(DateTimeFormatter.ofPattern(Messages.getString("YearPage.DATE_FORMAT"))); //$NON-NLS-1$
+        setDateTimeFormatter(DateTimeFormatter.ofPattern(Messages.getString("YearPage.DATE_FORMAT")));
 
         displayModeProperty().addListener(it -> updateDisplayModeIcon());
 
         displayModeButton = new ToggleButton();
+        displayModeButton.setMaxHeight(Double.MAX_VALUE);
         displayModeButton.setId("display-mode-button");
         displayModeButton.setTooltip(new Tooltip(Messages.getString("YearPage.TOOLTIP_DISPLAY_MODE")));
         displayModeButton.setSelected(getDisplayMode().equals(DisplayMode.COLUMNS));
@@ -110,12 +110,12 @@ public class YearPage extends PageBase {
      * mode (column or grid).
      */
     private void updateDisplayModeIcon() {
-        FontAwesomeIcon icon = FontAwesomeIcon.CALENDAR;
+        FontAwesome icon = FontAwesome.CALENDAR;
         if (getDisplayMode().equals(DisplayMode.GRID)) {
-            icon = FontAwesomeIcon.CALENDAR_ALT;
+            icon = FontAwesome.TABLE;
         }
 
-        final Text graphic = FontAwesomeIconFactory.get().createIcon(icon);
+        final FontIcon graphic = new FontIcon(icon);
         graphic.getStyleClass().addAll("button-icon", "display-mode-icon");
         displayModeButton.setGraphic(graphic);
     }
@@ -201,7 +201,7 @@ public class YearPage extends PageBase {
         return ViewType.MONTH_VIEW;
     }
 
-    private final String YEAR_PAGE_CATEGORY = "Year Page"; //$NON-NLS-1$
+    private final String YEAR_PAGE_CATEGORY = "Year Page";
 
     @Override
     public ObservableList<PropertySheet.Item> getPropertySheetItems() {
@@ -231,12 +231,12 @@ public class YearPage extends PageBase {
 
             @Override
             public String getName() {
-                return "Display Mode"; //$NON-NLS-1$
+                return "Display Mode";
             }
 
             @Override
             public String getDescription() {
-                return "Grid or Column Layout"; //$NON-NLS-1$
+                return "Grid or Column Layout";
             }
 
             @Override

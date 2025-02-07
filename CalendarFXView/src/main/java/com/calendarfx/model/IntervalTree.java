@@ -39,7 +39,7 @@ class IntervalTree<E extends Entry<?>> {
 
     private TreeEntry<E> root;
     private int treeSize;
-    private Set<String> entryIDs = new HashSet<>();
+    private final Set<String> entryIDs = new HashSet<>();
 
     public final Instant getEarliestTimeUsed() {
         if (root != null) {
@@ -363,8 +363,8 @@ class IntervalTree<E extends Entry<?>> {
 
         @Override
         public String toString() {
-            return "[" + Instant.ofEpochMilli(low) + " - " //$NON-NLS-1$ //$NON-NLS-2$
-                    + Instant.ofEpochMilli(high) + "]=" + value; //$NON-NLS-1$
+            return "[" + Instant.ofEpochMilli(low) + " - "
+                    + Instant.ofEpochMilli(high) + "]=" + value;
         }
 
         public TreeEntry<V> getLeft() {
@@ -673,9 +673,9 @@ class IntervalTree<E extends Entry<?>> {
 
     private class TimeInterval {
 
-        private Instant startTime;
+        private final Instant startTime;
 
-        private Instant endTime;
+        private final Instant endTime;
 
         public TimeInterval(Instant startTime, Instant endTime) {
             requireNonNull(startTime);
@@ -683,8 +683,8 @@ class IntervalTree<E extends Entry<?>> {
 
             if (startTime.isAfter(endTime)) {
                 throw new IllegalArgumentException(
-                        "start time can not be after end time, start = " //$NON-NLS-1$
-                                + startTime + ", end = " + endTime); //$NON-NLS-1$
+                        "start time can not be after end time, start = "
+                                + startTime + ", end = " + endTime);
             }
 
             this.startTime = startTime;

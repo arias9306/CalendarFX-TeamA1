@@ -34,13 +34,13 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * A popover that shows the calendar entries for a given date.
- * <p/>
- * <center><img src="doc-files/date-popover.png"></center>
+ *
+ * <img src="doc-files/date-popover.png" alt="Date PopOver">
  */
 public class DatePopOver extends PopOver {
 
-    private DateControl dateControl;
-    private LocalDate date;
+    private final DateControl dateControl;
+    private final LocalDate date;
 
     /**
      * Constructs a new popover for the given date.
@@ -51,7 +51,7 @@ public class DatePopOver extends PopOver {
     public DatePopOver(DateControl control, LocalDate date) {
         this.dateControl = requireNonNull(control);
         this.date = requireNonNull(date);
-        EntriesPane entriesPane = new EntriesPane();
+        EntriesPane entriesPane = new EntriesPane(control);
 
         getRoot().getStylesheets().add(CalendarView.class.getResource("calendar.css").toExternalForm());
         getRoot().getStyleClass().add("root");
@@ -59,15 +59,15 @@ public class DatePopOver extends PopOver {
         List<Entry<?>> entries = findEntries();
         if (entries == null || entries.isEmpty()) {
             Label label = new Label();
-            label.setText("No Entries"); //$NON-NLS-1$
-            label.getStyleClass().add("no-entries-label"); //$NON-NLS-1$
+            label.setText("No Entries");
+            label.getStyleClass().add("no-entries-label");
             setContentNode(label);
         } else {
             entriesPane.getEntries().setAll(entries);
             setContentNode(entriesPane);
         }
 
-        getStyleClass().add("date-popover"); //$NON-NLS-1$
+        getStyleClass().add("date-popover");
         setArrowIndent(4);
         setDetachable(false);
         setArrowLocation(PopOver.ArrowLocation.LEFT_CENTER);

@@ -21,19 +21,19 @@ import com.calendarfx.model.CalendarEvent;
 import com.calendarfx.model.CalendarSource;
 import com.calendarfx.model.Entry;
 import com.calendarfx.util.LoggingDomain;
-import com.calendarfx.util.Util;
 import com.calendarfx.view.AllDayEntryView;
 import com.calendarfx.view.AllDayView;
 import com.calendarfx.view.DraggedEntry;
 import com.calendarfx.view.EntryViewBase;
 import impl.com.calendarfx.view.util.Placement;
-import impl.com.calendarfx.view.util.Resolver;
+import impl.com.calendarfx.view.util.TimeBoundsResolver;
+import impl.com.calendarfx.view.util.Util;
 import javafx.beans.InvalidationListener;
 import javafx.geometry.Insets;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
-import javafx.scene.layout.ColumnConstraints;
-import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.util.Callback;
@@ -46,27 +46,34 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 public class AllDayViewSkin extends DateControlSkin<AllDayView> implements LoadDataSettingsProvider {
 
-    private static final String ALL_DAY_BACKGROUND_REGION = "day-region"; //$NON-NLS-1$
-    private static final String ALL_DAY_BACKGROUND_REGION_TODAY = "today"; //$NON-NLS-1$
-    private static final String ALL_DAY_BACKGROUND_REGION_WEEKEND = "weekend"; //$NON-NLS-1$
+    private static final String ALL_DAY_BACKGROUND_REGION = "day-region";
+    private static final String ALL_DAY_BACKGROUND_REGION_TODAY = "today";
+    private static final String ALL_DAY_BACKGROUND_REGION_WEEKEND = "weekend";
 
-    private DataLoader dataLoader;
-    private GridPane pane;
+    private final DataLoader dataLoader;
+    private final HBox container;
+
+    private final Group entryViewGroup = new Group();
 
     public AllDayViewSkin(AllDayView view) {
         super(view);
 
         view.setFocusTraversable(true);
 
-        pane = new GridPane();
-        pane.getStyleClass().add("container");
-        getChildren().add(pane);
+        container = new HBox();
+        container.getStyleClass().add("container");
+        getChildren().add(container);
+
+        entryViewGroup.setMouseTransparent(false);
+        entryViewGroup.setManaged(false);
+        getChildren().add(entryViewGroup);
 
         // update backgrounds
         InvalidationListener updateBackgroundsListener = evt -> updateBackgrounds();
@@ -101,7 +108,7 @@ public class AllDayViewSkin extends DateControlSkin<AllDayView> implements LoadD
     private void updateEntries(String reason) {
         LoggingDomain.PERFORMANCE.fine("updating entries, reason: " + reason);
 
-        getChildren().removeIf(child -> child instanceof AllDayEntryView);
+        entryViewGroup.getChildren().clear();
 
         Map<LocalDate, List<Entry<?>>> dataMap = new HashMap<>();
         dataLoader.loadEntries(dataMap);
@@ -120,29 +127,26 @@ public class AllDayViewSkin extends DateControlSkin<AllDayView> implements LoadD
         }
 
         getSkinnable().autosize();
+
+        getSkinnable().requestLayout();
     }
 
-    private boolean removeEntryView(Entry<?> entry) {
-        boolean removed = getChildren().removeIf(node -> {
-            if (node instanceof AllDayEntryView) {
-                AllDayEntryView view = (AllDayEntryView) node;
+    private List<EntryViewBase> findEntryViews(Entry<?> entry) {
+        return entryViewGroup.getChildren().stream()
+                .map(node -> (EntryViewBase) node)
+                .filter(e -> e.getEntry().getId().equals(entry.getId()))
+                .collect(Collectors.toList());
+    }
 
-                Entry<?> removedEntry = entry;
-                if (removedEntry.getRecurrenceSourceEntry() != null) {
-                    removedEntry = removedEntry.getRecurrenceSourceEntry();
-                }
+    private boolean removeEntryViews(Entry<?> entry, String reason) {
+        if (reason != null) {
+            LoggingDomain.VIEW.fine("removing entry, reason = " + reason + ", date = " + getSkinnable().getDate());
+        }
 
-                Entry<?> viewEntry = view.getEntry();
-                if (viewEntry.getRecurrenceSourceEntry() != null) {
-                    viewEntry = viewEntry.getRecurrenceSourceEntry();
-                }
-
-                if (viewEntry.getId().equals(removedEntry.getId())) {
-                    return true;
-                }
-            }
-
-            return false;
+        boolean removed = Util.removeChildren(entryViewGroup, node -> {
+            AllDayEntryView view = (AllDayEntryView) node;
+            Entry<?> viewEntry = view.getEntry();
+            return viewEntry.getId().equals(entry.getId());
         });
 
         if (removed && !(entry instanceof DraggedEntry) && LoggingDomain.VIEW.isLoggable(Level.FINE)) {
@@ -152,31 +156,49 @@ public class AllDayViewSkin extends DateControlSkin<AllDayView> implements LoadD
         return removed;
     }
 
-    private void addEntryView(Entry<?> entry) {
+    private void addEntryViews(Entry<?> entry, String reason) {
+        LoggingDomain.VIEW.fine("adding entry, reason = " + reason + ", date = " + getSkinnable().getDate());
         if (entry.isRecurring()) {
-            Calendar calendar = entry.getCalendar();
-            final Map<LocalDate, List<Entry<?>>> entries = calendar.findEntries(getLoadStartDate(), getLoadEndDate(), getZoneId());
-            for (LocalDate date : entries.keySet()) {
-                List<Entry<?>> entriesOnDate = entries.get(date);
-                if (entriesOnDate != null) {
-                    entriesOnDate.forEach(this::doAddEntryView);
-                }
-            }
+            Map<LocalDate, Entry<?>> recurrenceEntries = findRecurrenceEntries(entry);
+            recurrenceEntries.forEach((date, recurrence) -> doAddEntryView(recurrence));
         } else {
             doAddEntryView(entry);
         }
+
+        getSkinnable().requestLayout();
+    }
+
+    private Map<LocalDate, Entry<?>> findRecurrenceEntries(Entry<?> entry) {
+        Calendar calendar = entry.getCalendar();
+        LocalDate startDate = getLoadStartDate();
+        LocalDate endDate = getLoadEndDate();
+
+        Map<LocalDate, List<Entry<?>>> entries = calendar.findEntries(startDate, endDate, getZoneId());
+        Map<LocalDate, Entry<?>> result = new HashMap<>();
+
+        entries.forEach((date, list) -> {
+            if (!list.isEmpty()) {
+                Optional<Entry<?>> first = list.stream()
+                        .filter(e -> e.getId().equals(entry.getId()))
+                        .filter(e -> e.getStartDate().equals(date))
+                        .findFirst();
+                if (first.isPresent()) {
+                    result.put(date, first.get());
+                }
+            }
+        });
+
+        return result;
     }
 
     private AllDayEntryView doAddEntryView(Entry<?> entry) {
         Callback<Entry<?>, AllDayEntryView> factory = getSkinnable().getEntryViewFactory();
         AllDayEntryView view = factory.call(entry);
-        view.applyCss(); // TODO: really needed
-        view.getProperties().put("control", getSkinnable()); //$NON-NLS-1$
+        view.getProperties().put("control", getSkinnable());
         view.setManaged(false);
 
         int index = findIndex(entry);
-
-        getChildren().add(index, view);
+        entryViewGroup.getChildren().add(index, view);
 
         if (!(entry instanceof DraggedEntry) && LoggingDomain.VIEW.isLoggable(Level.FINE)) {
             LoggingDomain.VIEW.fine("added entry view " + entry.getTitle() + ", day = " + getSkinnable().getDate());
@@ -190,16 +212,14 @@ public class AllDayViewSkin extends DateControlSkin<AllDayView> implements LoadD
      * view. The right order is important for TAB traversal to work properly.
      */
     private int findIndex(Entry<?> entry) {
-        int childrenSize = getChildren().size();
+        int childrenSize = entryViewGroup.getChildren().size();
 
         for (int i = 0; i < childrenSize; i++) {
-            Node node = getChildren().get(i);
-            if (node instanceof AllDayEntryView) {
-                AllDayEntryView view = (AllDayEntryView) node;
-                Entry<?> viewEntry = view.getEntry();
-                if (viewEntry.getStartAsZonedDateTime().isAfter(entry.getStartAsZonedDateTime())) {
-                    return i;
-                }
+            Node node = entryViewGroup.getChildren().get(i);
+            AllDayEntryView view = (AllDayEntryView) node;
+            Entry<?> viewEntry = view.getEntry();
+            if (viewEntry.getStartAsZonedDateTime().isAfter(entry.getStartAsZonedDateTime())) {
+                return i;
             }
         }
 
@@ -212,109 +232,127 @@ public class AllDayViewSkin extends DateControlSkin<AllDayView> implements LoadD
     }
 
     @Override
-    protected void entryCalendarChanged(CalendarEvent evt) {
+    protected void entryTitleChanged(CalendarEvent evt) {
+        LoggingDomain.VIEW.fine("handle entry title changed, date = " + getSkinnable().getDate());
         Entry<?> entry = evt.getEntry();
+        if (entry.isFullDay()) {
+            // no need to check for relevance, probably faster to just look for entry views
+            findEntryViews(entry).forEach(entryView -> entryView.getEntry().setTitle(evt.getEntry().getTitle()));
+        }
+    }
 
-        /*
-         * We only care about full day entries in this view.
-         */
-        if (!entry.isFullDay()) {
-            return;
+    @Override
+    protected void entryLocationChanged(CalendarEvent evt) {
+        LoggingDomain.VIEW.fine("handle entry location changed, date = " + getSkinnable().getDate());
+        Entry<?> entry = evt.getEntry();
+        if (entry.isFullDay()) {
+            // no need to check for relevance, probably faster to just look for entry views
+            findEntryViews(entry).forEach(entryView -> entryView.getEntry().setLocation(evt.getEntry().getLocation()));
+        }
+    }
+
+    @Override
+    protected void entryUserObjectChanged(CalendarEvent evt) {
+        LoggingDomain.VIEW.fine("handle entry user object changed, date = " + getSkinnable().getDate());
+        Entry<?> entry = evt.getEntry();
+        if (entry.isFullDay()) {
+            // no need to check for relevance, probably faster to just look for entry views
+            findEntryViews(entry).forEach(entryView -> entryView.getEntry().setUserObject(evt.getEntry().getUserObject()));
+        }
+    }
+
+    @Override
+    protected void entryCalendarChanged(CalendarEvent evt) {
+        LoggingDomain.VIEW.fine("handle entry calendar changed, date = " + getSkinnable().getDate());
+
+        Entry<?> entry = evt.getEntry();
+        if (evt.getCalendar() == null) {
+            removeEntryViews(entry, "entry was deleted");
+        } else {
+            if (entry.isFullDay() && isRelevant(entry)) {
+                List<EntryViewBase> entryView = findEntryViews(entry);
+                if (!entryView.isEmpty()) {
+                    entryView.forEach(view -> view.getEntry().setCalendar(evt.getCalendar()));
+                } else {
+                    addEntryViews(entry, "entry calendar changed");
+                }
+            }
         }
 
-        if (evt.isEntryRemoved()) {
-            removeEntryView(entry);
-            getSkinnable().requestLayout();
-        }
-
-        if (evt.isEntryAdded() && isRelevant(entry)) {
-            addEntryView(entry);
-            getSkinnable().requestLayout();
-        }
+        getSkinnable().requestLayout();
     }
 
     @Override
     protected void entryFullDayChanged(CalendarEvent evt) {
+        LoggingDomain.VIEW.fine("handle entry full day flag changed, date = " + getSkinnable().getDate());
         Entry<?> entry = evt.getEntry();
         if (isRelevant(entry)) {
+            removeEntryViews(entry, "full day flag changed to false");
             if (entry.isFullDay()) {
-                addEntryView(entry);
-            } else {
-                removeEntryView(entry);
+                addEntryViews(entry, "full day flag changed to true, no entry view can be present");
             }
-            getSkinnable().requestLayout();
         }
+        getSkinnable().requestLayout();
     }
 
     @Override
     protected void entryRecurrenceRuleChanged(CalendarEvent evt) {
+        LoggingDomain.VIEW.fine("handle entry recurrence rule changed, date = " + getSkinnable().getDate());
         Entry<?> entry = evt.getEntry();
 
         /*
          * We only care about full day entries in this view.
          */
-        if (!entry.isFullDay()) {
-            return;
+        if (entry.isFullDay()) {
+            // remove all entry views
+            removeEntryViews(entry, "recurrence rule changed");
+            if (isRelevant(entry)) {
+                addEntryViews(entry, "recurrence rule changed");
+            }
         }
 
-        removeEntryView(entry);
-        addEntryView(entry);
+        getSkinnable().requestLayout();
     }
 
     @Override
     protected void entryIntervalChanged(CalendarEvent evt) {
+        LoggingDomain.VIEW.fine("handle entry interval changed, date = " + getSkinnable().getDate());
+
         Entry<?> entry = evt.getEntry();
 
         /*
          * We only care about full day entries in this view.
          */
-        if (!entry.isFullDay()) {
-            return;
-        }
-
-        removeEntryView(entry);
-
-        if (isRelevant(entry)) {
-            if (entry.isRecurring()) {
-                Calendar calendar = entry.getCalendar();
-                final Map<LocalDate, List<Entry<?>>> entriesMap = calendar.findEntries(getLoadStartDate(), getLoadEndDate(), getZoneId());
-                List<Entry<?>> entries = entriesMap.get(getSkinnable().getDate());
-                if (entries != null) {
-                    for (Entry<?> e : entries) {
-                        if (e.getId().equals(entry.getId())) {
-                            addEntryView(e);
-
-                            /*
-                             * We only support recurrence for temporal units larger than days, so there can only
-                             * be one entry.
-                             */
-                            break;
-                        }
-                    }
-                }
-            } else {
-                addEntryView(entry);
+        if (entry.isFullDay()) {
+            // remove all entry views
+            removeEntryViews(entry, "interval changed");
+            if (isRelevant(entry)) {
+                addEntryViews(entry, "interval changed");
             }
         }
+
+        getSkinnable().requestLayout();
     }
 
     @Override
     protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
 
-        List<AllDayEntryView> entryViews = getChildren().stream().filter(node -> node instanceof AllDayEntryView).map(node -> (AllDayEntryView) node).collect(Collectors.toList());
+        List<AllDayEntryView> entryViews = entryViewGroup.getChildren().stream().filter(node -> node instanceof AllDayEntryView).map(node -> (AllDayEntryView) node).collect(Collectors.toList());
 
-        List<Placement> placements = Resolver.resolve(entryViews);
+        List<Placement> placements = TimeBoundsResolver.resolve(entryViews);
 
         int maxPosition = 0;
         for (Placement p : placements) {
             maxPosition = Math.max(maxPosition, p.getColumnIndex());
         }
 
-        Insets insets = getSkinnable().getInsets();
-        Insets extraPadding = getSkinnable().getExtraPadding();
+        AllDayView view = getSkinnable();
 
-        double rowHeight = getSkinnable().getRowHeight();
-        double rowSpacing = getSkinnable().getRowSpacing();
+        Insets insets = view.getInsets();
+        Insets extraPadding = view.getExtraPadding();
+
+        double rowHeight = view.getRowHeight();
+        double rowSpacing = view.getRowSpacing();
         return (maxPosition + 1) * rowHeight + (maxPosition * rowSpacing) + insets.getTop() + insets.getBottom() * extraPadding.getTop() + extraPadding.getBottom();
     }
 
@@ -324,35 +362,32 @@ public class AllDayViewSkin extends DateControlSkin<AllDayView> implements LoadD
     }
 
     @Override
-    protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        return computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
-    }
-
-    @Override
     protected void layoutChildren(double contentX, double contentY, double contentWidth, double contentHeight) {
         super.layoutChildren(contentX, contentY, contentWidth, contentHeight);
 
-        double rowHeight = getSkinnable().getRowHeight();
-        double rowSpacing = getSkinnable().getRowSpacing();
+        AllDayView view = getSkinnable();
+
+        double rowHeight = view.getRowHeight();
+        double rowSpacing = view.getRowSpacing();
 
         double height = 0;
 
-        Insets extraPadding = getSkinnable().getExtraPadding();
+        Insets extraPadding = view.getExtraPadding();
 
-        List<AllDayEntryView> entryViews = getChildren().stream().filter(node -> node instanceof AllDayEntryView).map(node -> (AllDayEntryView) node).collect(Collectors.toList());
+        List<AllDayEntryView> entryViews = entryViewGroup.getChildren().stream().map(node -> (AllDayEntryView) node).collect(Collectors.toList());
 
-        List<Placement> placements = Resolver.resolve(entryViews);
+        List<Placement> placements = TimeBoundsResolver.resolve(entryViews);
 
         for (Placement placement : placements) {
-            EntryViewBase<?> view = placement.getEntryView();
-            Entry<?> entry = view.getEntry();
+            EntryViewBase<?> entryView = placement.getEntryView();
+            Entry<?> entry = entryView.getEntry();
 
-            LocalDate startDate = getSkinnable().getDate();
-            if (getSkinnable().isAdjustToFirstDayOfWeek()) {
-                startDate = Util.adjustToFirstDayOfWeek(getSkinnable().getDate(), getSkinnable().getFirstDayOfWeek());
+            LocalDate startDate = view.getDate();
+            if (view.isAdjustToFirstDayOfWeek()) {
+                startDate = Util.adjustToFirstDayOfWeek(view.getDate(), view.getFirstDayOfWeek());
             }
 
-            LocalDate endDate = startDate.plusDays(getSkinnable().getNumberOfDays() - 1);
+            LocalDate endDate = startDate.plusDays(view.getNumberOfDays() - 1);
 
             long deltaDays = ChronoUnit.DAYS.between(startDate, entry.getStartDate());
 
@@ -363,68 +398,69 @@ public class AllDayViewSkin extends DateControlSkin<AllDayView> implements LoadD
             }
 
             if (entry.getStartDate().isBefore(startDate)) {
-                view.getProperties().put("startDate", startDate); //$NON-NLS-1$
+                entryView.getProperties().put("startDate", startDate);
             } else {
-                view.getProperties().put("startDate", entry.getStartDate()); //$NON-NLS-1$
+                entryView.getProperties().put("startDate", entry.getStartDate());
             }
 
             if (entry.getEndDate().isAfter(endDate)) {
-                view.getProperties().put("endDate", endDate); //$NON-NLS-1$
+                entryView.getProperties().put("endDate", endDate);
             } else {
-                view.getProperties().put("endDate", entry.getEndDate()); //$NON-NLS-1$
+                entryView.getProperties().put("endDate", entry.getEndDate());
             }
 
             entryDurationInDays = Math.max(entryDurationInDays, 1);
 
-            double dayWidth = contentWidth / getSkinnable().getNumberOfDays();
+            double dayWidth = contentWidth / view.getNumberOfDays();
 
             double x = Math.max(0, contentX + (deltaDays * dayWidth));
             double y = contentY + placement.getColumnIndex() * (rowHeight + rowSpacing) + extraPadding.getTop();
 
             double w;
-            if (getSkinnable().getNumberOfDays() == 1) {
+            if (view.getNumberOfDays() == 1) {
                 w = contentWidth + 1;
             } else {
-                w = Math.min(entryDurationInDays * dayWidth - getSkinnable().getColumnSpacing(), contentWidth - x);
+                w = Math.min(entryDurationInDays * dayWidth - view.getColumnSpacing(), contentWidth - x);
             }
 
-            view.setMaxHeight(rowHeight);
+            entryView.setMaxHeight(rowHeight);
 
-            view.resizeRelocate(snapPosition(x), snapPosition(y), snapSize(w), snapSize(rowHeight));
+            entryView.resizeRelocate(snapPositionX(x), snapPositionY(y), snapSizeX(w), snapSizeY(rowHeight));
 
             height = Math.max(height, y + rowHeight);
         }
     }
 
     private void updateBackgrounds() {
-        // the day views
+        container.getChildren().clear();
 
-        pane.getChildren().clear();
-        List<ColumnConstraints> constraints = new ArrayList<>();
+        AllDayView allDayView = getSkinnable();
+        Callback<AllDayView, Region> separatorFactory = allDayView.getSeparatorFactory();
 
-        int numberOfDays = getSkinnable().getNumberOfDays();
+        int numberOfDays = allDayView.getNumberOfDays();
         for (int i = 0; i < numberOfDays; i++) {
-            ColumnConstraints con = new ColumnConstraints();
-            con.setPercentWidth((double) 100 / (double) numberOfDays);
-            constraints.add(con);
             Region region = new Region();
+            region.setPrefWidth(1); // equal width distribution
             region.setMaxWidth(Double.MAX_VALUE);
             region.getStyleClass().add(ALL_DAY_BACKGROUND_REGION);
-            GridPane.setHgrow(region, Priority.ALWAYS);
-            GridPane.setVgrow(region, Priority.ALWAYS);
-            GridPane.setFillHeight(region, true);
-            GridPane.setFillWidth(region, true);
 
             final int day = i;
-            getSkinnable().dateProperty().addListener(evt -> updateRegion(region, day));
+            allDayView.dateProperty().addListener(evt -> updateRegion(region, day));
             updateRegion(region, day);
 
-            pane.add(region, i, 0);
+            HBox.setHgrow(region, Priority.ALWAYS);
+            container.getChildren().add(region);
+
+            if (separatorFactory != null && i < numberOfDays - 1) {
+                Region separator = separatorFactory.call(allDayView);
+                if (separator != null) {
+                    container.getChildren().add(separator);
+                    HBox.setHgrow(separator, Priority.NEVER);
+                }
+            }
         }
 
-        pane.getColumnConstraints().setAll(constraints);
-
-        getSkinnable().requestLayout();
+        allDayView.requestLayout();
     }
 
     private void updateRegion(Region region, int day) {
@@ -461,7 +497,7 @@ public class AllDayViewSkin extends DateControlSkin<AllDayView> implements LoadD
 
     @Override
     public String getLoaderName() {
-        return "All Day View"; //$NON-NLS-1$
+        return "All Day View";
     }
 
     @Override
@@ -488,7 +524,7 @@ public class AllDayViewSkin extends DateControlSkin<AllDayView> implements LoadD
 
     @Override
     public ZoneId getZoneId() {
-        return ZoneId.systemDefault();
+        return getSkinnable().getZoneId();
     }
 
     @Override

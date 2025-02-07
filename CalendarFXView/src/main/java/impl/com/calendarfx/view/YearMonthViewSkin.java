@@ -16,39 +16,19 @@
 
 package impl.com.calendarfx.view;
 
-import static java.lang.Double.MAX_VALUE;
-import static java.time.format.TextStyle.SHORT;
-import static javafx.geometry.Pos.CENTER;
-import static javafx.scene.control.SelectionMode.SINGLE;
-import static javafx.scene.layout.Priority.ALWAYS;
-
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.Year;
-import java.time.YearMonth;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-
 import com.calendarfx.model.Calendar;
 import com.calendarfx.model.CalendarEvent;
 import com.calendarfx.model.CalendarSource;
 import com.calendarfx.model.Entry;
 import com.calendarfx.util.LoggingDomain;
-import com.calendarfx.util.Util;
 import com.calendarfx.view.DateControl;
 import com.calendarfx.view.DateControl.DateDetailsParameter;
 import com.calendarfx.view.Messages;
 import com.calendarfx.view.RequestEvent;
 import com.calendarfx.view.YearMonthView;
-
+import impl.com.calendarfx.view.util.Util;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -66,8 +46,24 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 import javafx.util.Callback;
 
-public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
-        implements LoadDataSettingsProvider {
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.Year;
+import java.time.YearMonth;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+import static java.lang.Double.MAX_VALUE;
+import static java.time.format.TextStyle.SHORT;
+import static javafx.geometry.Pos.CENTER;
+import static javafx.scene.control.SelectionMode.SINGLE;
+import static javafx.scene.layout.Priority.ALWAYS;
+
+public class YearMonthViewSkin extends DateControlSkin<YearMonthView> implements LoadDataSettingsProvider {
 
     private static final String DAY_OF_WEEK_LABEL = "day-of-week-label";
     private static final String CURRENT_DATE_LABEL = "current-date-label";
@@ -83,19 +79,19 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
     private static final String WEEKEND_DAY = "weekend-day";
     private static final String SELECTED_MONTH_DATE = "selected-month-date";
 
-    private GridPane gridPane;
+    private final GridPane gridPane;
 
-    private Label monthLabel;
+    private final Label monthLabel;
 
-    private Label yearLabel;
+    private final Label yearLabel;
 
-    private Map<String, YearMonthView.DateCell> cellsMap = new HashMap<>();
+    private final Map<String, YearMonthView.DateCell> cellsMap = new HashMap<>();
 
-    private Label[] dayOfWeekLabels = new Label[7];
+    private final Label[] dayOfWeekLabels = new Label[7];
 
-    private Label[] weekNumberLabels = new Label[6];
+    private final Label[] weekNumberLabels = new Label[6];
 
-    private DataLoader dataLoader;
+    private final DataLoader dataLoader;
 
     private YearMonth displayedYearMonth;
 
@@ -107,20 +103,19 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
         gridPane = new GridPane();
         gridPane.setAlignment(Pos.CENTER);
         gridPane.setMaxSize(MAX_VALUE, MAX_VALUE);
-        gridPane.getStyleClass().add("container"); //$NON-NLS-1$
+        gridPane.getStyleClass().add("container");
 
         monthLabel = new Label();
-        monthLabel.getStyleClass().add("month-label"); //$NON-NLS-1$
+        monthLabel.getStyleClass().add("month-label");
         monthLabel.visibleProperty().bind(view.showMonthProperty());
 
         yearLabel = new Label();
-        yearLabel.getStyleClass().add("year-label"); //$NON-NLS-1$
+        yearLabel.getStyleClass().add("year-label");
         yearLabel.visibleProperty().bind(view.showYearProperty());
 
         final InvalidationListener updateViewListener = evt -> updateView();
         view.yearMonthProperty().addListener(evt -> {
-            if (displayedYearMonth == null
-                    || !displayedYearMonth.equals(view.getYearMonth())) {
+            if (displayedYearMonth == null || !displayedYearMonth.equals(view.getYearMonth())) {
                 updateView();
             }
         });
@@ -130,8 +125,7 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
         view.showTodayProperty().addListener(updateViewListener);
         view.getSelectedDates().addListener(updateViewListener);
 
-        view.showUsageColorsProperty().addListener(
-                it -> updateUsageColors("show usage colors flag changed"));
+        view.showUsageColorsProperty().addListener(it -> updateUsageColors("show usage colors flag changed"));
 
         view.showWeekNumbersProperty().addListener(buildViewListener);
         view.showMonthArrowsProperty().addListener(buildViewListener);
@@ -142,17 +136,11 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
         view.showTodayButtonProperty().addListener(buildViewListener);
         view.showYearArrowsProperty().addListener(buildViewListener);
 
-        view.getCalendars().addListener((Observable it) -> updateUsageColors(
-                "list of calendars changed"));
+        view.getCalendars().addListener((Observable it) -> updateUsageColors("list of calendars changed"));
 
-        view.dateProperty().addListener(new ChangeListener<LocalDate>() {
-
-            @Override
-            public void changed(ObservableValue<? extends LocalDate> observable,
-                    LocalDate oldValue, LocalDate newValue) {
-                if (oldValue.getYear() != newValue.getYear()) {
-                    updateUsageColors("Year has changed.");
-                }
+        view.dateProperty().addListener((observable, oldValue, newValue) -> {
+            if (oldValue.getYear() != newValue.getYear()) {
+                updateUsageColors("Year has changed.");
             }
         });
 
@@ -165,8 +153,7 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
         getChildren().add(gridPane);
 
         updateHyperlinkSupport();
-        view.enableHyperlinksProperty()
-                .addListener(it -> updateHyperlinkSupport());
+        view.enableHyperlinksProperty().addListener(it -> updateHyperlinkSupport());
 
         buildView();
 
@@ -181,15 +168,13 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
         if (view.isEnableHyperlinks()) {
             monthLabel.setOnMouseClicked(evt -> {
                 if (evt.getClickCount() == 1) {
-                    view.fireEvent(new RequestEvent(view, view,
-                            getSkinnable().getYearMonth()));
+                    view.fireEvent(new RequestEvent(view, view, getSkinnable().getYearMonth()));
                 }
             });
 
             yearLabel.setOnMouseClicked(evt -> {
                 if (evt.getClickCount() == 1) {
-                    view.fireEvent(new RequestEvent(view, view,
-                            Year.of(getSkinnable().getYearMonth().getYear())));
+                    view.fireEvent(new RequestEvent(view, view, Year.of(getSkinnable().getYearMonth().getYear())));
                 }
             });
         } else {
@@ -290,10 +275,10 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
         YearMonthView view = getSkinnable();
 
         BorderPane header = new BorderPane();
-        header.getStyleClass().add("header"); //$NON-NLS-1$
+        header.getStyleClass().add("header");
 
         BorderPane leftHeader = new BorderPane();
-        leftHeader.getStyleClass().add("month-header"); //$NON-NLS-1$
+        leftHeader.getStyleClass().add("month-header");
 
         if (getSkinnable().isShowMonth()) {
             if (getSkinnable().isShowMonthArrows()) {
@@ -301,10 +286,9 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
                 Region prevMonthRegion = new Region();
                 BorderPane.setAlignment(prevMonthRegion, Pos.CENTER);
                 BorderPane.setMargin(prevMonthRegion, new Insets(0, 6, 0, 6));
-                prevMonthRegion.getStyleClass().add("previous-button"); //$NON-NLS-1$
+                prevMonthRegion.getStyleClass().add("previous-button");
                 leftHeader.setLeft(prevMonthRegion);
-                prevMonthRegion.setOnMouseClicked(evt -> getSkinnable()
-                        .setDate(getSkinnable().getDate().minusMonths(1)));
+                prevMonthRegion.setOnMouseClicked(evt -> getSkinnable().setDate(getSkinnable().getDate().minusMonths(1)));
             }
 
             // center: year label
@@ -315,10 +299,9 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
                 Region nextMonthRegion = new Region();
                 BorderPane.setAlignment(nextMonthRegion, Pos.CENTER);
                 BorderPane.setMargin(nextMonthRegion, new Insets(0, 6, 0, 6));
-                nextMonthRegion.getStyleClass().add("next-button"); //$NON-NLS-1$
+                nextMonthRegion.getStyleClass().add("next-button");
                 leftHeader.setRight(nextMonthRegion);
-                nextMonthRegion.setOnMouseClicked(evt -> getSkinnable()
-                        .setDate(getSkinnable().getDate().plusMonths(1)));
+                nextMonthRegion.setOnMouseClicked(evt -> getSkinnable().setDate(getSkinnable().getDate().plusMonths(1)));
             }
 
             header.setLeft(leftHeader);
@@ -326,17 +309,16 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
 
         if (getSkinnable().isShowYear()) {
             BorderPane rightHeader = new BorderPane();
-            rightHeader.getStyleClass().add("year-header"); //$NON-NLS-1$
+            rightHeader.getStyleClass().add("year-header");
 
             if (getSkinnable().isShowYearArrows()) {
                 // left: previous year button
                 Region prevYearRegion = new Region();
                 BorderPane.setAlignment(prevYearRegion, Pos.CENTER);
                 BorderPane.setMargin(prevYearRegion, new Insets(0, 6, 0, 6));
-                prevYearRegion.getStyleClass().add("previous-button"); //$NON-NLS-1$
+                prevYearRegion.getStyleClass().add("previous-button");
                 rightHeader.setLeft(prevYearRegion);
-                prevYearRegion.setOnMouseClicked(evt -> getSkinnable()
-                        .setDate(getSkinnable().getDate().minusYears(1)));
+                prevYearRegion.setOnMouseClicked(evt -> getSkinnable().setDate(getSkinnable().getDate().minusYears(1)));
             }
 
             // center: year label
@@ -347,10 +329,9 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
                 Region nextYearRegion = new Region();
                 BorderPane.setAlignment(nextYearRegion, Pos.CENTER);
                 BorderPane.setMargin(nextYearRegion, new Insets(0, 6, 0, 6));
-                nextYearRegion.getStyleClass().add("next-button"); //$NON-NLS-1$
+                nextYearRegion.getStyleClass().add("next-button");
                 rightHeader.setRight(nextYearRegion);
-                nextYearRegion.setOnMouseClicked(evt -> getSkinnable()
-                        .setDate(getSkinnable().getDate().plusYears(1)));
+                nextYearRegion.setOnMouseClicked(evt -> getSkinnable().setDate(getSkinnable().getDate().plusYears(1)));
             }
 
             header.setRight(rightHeader);
@@ -362,8 +343,7 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
 
         DayOfWeek dayOfWeek = view.getFirstDayOfWeek();
         for (int i = 0; i < 7; i++) {
-            dayOfWeekLabels[i] = new Label(
-                    dayOfWeek.getDisplayName(SHORT, Locale.getDefault()));
+            dayOfWeekLabels[i] = new Label(dayOfWeek.getDisplayName(SHORT, Locale.getDefault()));
             dayOfWeekLabels[i].setAlignment(CENTER);
             dayOfWeekLabels[i].setMaxSize(MAX_VALUE, MAX_VALUE);
             dayOfWeekLabels[i].getStyleClass().add(DAY_OF_WEEK_LABEL);
@@ -381,7 +361,7 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
                 weekNumberLabels[i] = new Label();
                 weekNumberLabels[i].setMaxSize(MAX_VALUE, MAX_VALUE);
                 weekNumberLabels[i].setAlignment(Pos.CENTER_RIGHT);
-                weekNumberLabels[i].getStyleClass().add("week-label"); //$NON-NLS-1$
+                weekNumberLabels[i].getStyleClass().add("week-label");
                 gridPane.add(weekNumberLabels[i], 0, 2 + i);
                 date = date.plusWeeks(1);
             }
@@ -389,14 +369,12 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
 
         for (int row = 0; row < 6; row++) {
             for (int col = 0; col < 7; col++) {
-                Callback<YearMonthView, YearMonthView.DateCell> cellFactory = view
-                        .getCellFactory();
+                Callback<YearMonthView, YearMonthView.DateCell> cellFactory = view.getCellFactory();
                 YearMonthView.DateCell cell = cellFactory.call(getSkinnable());
                 GridPane.setHgrow(cell, ALWAYS);
                 GridPane.setVgrow(cell, ALWAYS);
-                cell.addEventHandler(MouseEvent.MOUSE_CLICKED,
-                        evt -> handleMouseClick(evt, cell, cell.getDate()));
-                cell.getStyleClass().add("month-day"); //$NON-NLS-1$
+                cell.addEventHandler(MouseEvent.MOUSE_CLICKED, evt -> handleMouseClick(evt, cell, cell.getDate()));
+                cell.getStyleClass().add("month-day");
                 cellsMap.put(getKey(row, col), cell);
                 gridPane.add(cell, col + 1, row + 2);
                 date = date.plusDays(1);
@@ -404,14 +382,12 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
         }
 
         if (getSkinnable().isShowTodayButton()) {
-            Button button = new Button(
-                    Messages.getString("YearMonthViewSkin.TODAY")); //$NON-NLS-1$
+            Button button = new Button(Messages.getString("YearMonthViewSkin.TODAY"));
             gridPane.add(button, 0, 9);
             GridPane.setColumnSpan(button, 8);
             GridPane.setHalignment(button, HPos.CENTER);
             GridPane.setMargin(button, new Insets(6, 0, 0, 0));
-            button.setOnAction(
-                    evt -> getSkinnable().setDate(getSkinnable().getToday()));
+            button.setOnAction(evt -> getSkinnable().setDate(getSkinnable().getToday()));
         }
 
         // after a build we always have to update the view
@@ -430,8 +406,7 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
 
         displayedYearMonth = yearMonth;
 
-        boolean currentYearMonth = getSkinnable().getYearMonth()
-                .equals(YearMonth.from(getSkinnable().getToday()));
+        boolean currentYearMonth = getSkinnable().getYearMonth().equals(YearMonth.from(getSkinnable().getToday()));
 
         monthLabel.getStyleClass().remove(CURRENT_DATE_LABEL);
         yearLabel.getStyleClass().remove(CURRENT_DATE_LABEL);
@@ -441,16 +416,8 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
             yearLabel.getStyleClass().add(CURRENT_DATE_LABEL);
         }
 
-        monthLabel
-                .setText(DateTimeFormatter
-                        .ofPattern(Messages
-                                .getString("YearMonthViewSkin.MONTH_FORMAT")) //$NON-NLS-1$
-                        .format(yearMonth));
-        yearLabel
-                .setText(DateTimeFormatter
-                        .ofPattern(Messages
-                                .getString("YearMonthViewSkin.YEAR_FORMAT")) //$NON-NLS-1$
-                        .format(yearMonth));
+        monthLabel.setText(DateTimeFormatter.ofPattern(Messages.getString("YearMonthViewSkin.MONTH_FORMAT")).format(yearMonth));
+        yearLabel.setText(DateTimeFormatter.ofPattern(Messages.getString("YearMonthViewSkin.YEAR_FORMAT")).format(yearMonth));
 
         // update the week days (mon, tues, wed, ....)
 
@@ -460,27 +427,23 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
                 if (currentYearMonth) {
                     dayOfWeekLabels[i].getStyleClass().add(CURRENT_DATE_BORDER);
                 } else {
-                    dayOfWeekLabels[i].getStyleClass()
-                            .removeAll(CURRENT_DATE_BORDER);
+                    dayOfWeekLabels[i].getStyleClass().removeAll(CURRENT_DATE_BORDER);
                 }
 
-                if (currentYearMonth
-                        && view.getToday().getDayOfWeek().equals(dayOfWeek)) {
+                if (currentYearMonth && view.getToday().getDayOfWeek().equals(dayOfWeek)) {
                     dayOfWeekLabels[i].getStyleClass().add(CURRENT_DATE_LABEL);
                 }
             }
         }
 
-        // update the days (1 .. 31) plus padding days
+        // update the days (1 to 31) plus padding days
 
         final DayOfWeek firstDayOfWeek = getSkinnable().getFirstDayOfWeek();
-        LocalDate date = Util.adjustToFirstDayOfWeek(getLoadStartDate(),
-                firstDayOfWeek);
+        LocalDate date = Util.adjustToFirstDayOfWeek(getLoadStartDate(), firstDayOfWeek);
 
         if (getSkinnable().isShowWeekNumbers()) {
             for (int i = 0; i < 6; i++) {
-                int weekOfYear = date
-                        .get(getSkinnable().getWeekFields().weekOfYear());
+                int weekOfYear = date.get(getSkinnable().getWeekFields().weekOfYear());
                 weekNumberLabels[i].setText(Integer.toString(weekOfYear));
                 date = date.plusWeeks(1);
             }
@@ -494,19 +457,15 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
 
                 YearMonthView.DateCell cell = cellsMap.get(getKey(row, col));
                 cell.setDate(localDate);
-                cell.getStyleClass().removeAll(TODAY, DAY_OF_MONTH_LABEL,
-                        DAY_NOT_OF_MONTH_LABEL, WEEKEND_DAY,
-                        SELECTED_MONTH_DATE);
+                cell.getStyleClass().removeAll(TODAY, DAY_OF_MONTH_LABEL, DAY_NOT_OF_MONTH_LABEL, WEEKEND_DAY, SELECTED_MONTH_DATE);
 
                 if (getSkinnable().getSelectedDates().contains(date)) {
                     cell.getStyleClass().add(SELECTED_MONTH_DATE); // $NON-NLS-1$
                 }
 
-                if (YearMonth.from(date)
-                        .equals(YearMonth.from(getSkinnable().getDate()))) {
-                    if (getSkinnable().isShowToday()
-                            && date.equals(getSkinnable().getToday())) {
-                        cell.getStyleClass().add(TODAY);
+                if (YearMonth.from(date).equals(YearMonth.from(getSkinnable().getDate()))) {
+                    if (getSkinnable().isShowToday() && date.equals(getSkinnable().getToday())) {
+                        cell.getStyleClass().addAll(DAY_OF_MONTH_LABEL, TODAY);
                     } else {
                         cell.getStyleClass().add(DAY_OF_MONTH_LABEL); // $NON-NLS-1$
                     }
@@ -548,11 +507,10 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
         case NONE:
             break;
         case SHOW_DETAILS:
-            Callback<DateDetailsParameter, Boolean> callback = view
-                    .getDateDetailsCallback();
-            DateDetailsParameter param = new DateDetailsParameter(evt, view,
-                    node, date, evt.getScreenX(), evt.getScreenY());
-            callback.call(param);
+            Callback<DateDetailsParameter, Boolean> callback = view.getDateDetailsCallback();
+            if (callback != null) {
+                callback.call(new DateDetailsParameter(evt, view, node, node.getScene().getRoot(), date, evt.getScreenX(), evt.getScreenY()));
+            }
             break;
         case PERFORM_SELECTION:
             boolean multiSelect = evt.isShiftDown() || evt.isShortcutDown();
@@ -662,7 +620,7 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
 
     @Override
     public String getLoaderName() {
-        return "Year Month View"; //$NON-NLS-1$
+        return "Year Month View";
     }
 
     @Override
@@ -687,7 +645,7 @@ public class YearMonthViewSkin extends DateControlSkin<YearMonthView>
 
     @Override
     public ZoneId getZoneId() {
-        return ZoneId.systemDefault();
+        return getSkinnable().getZoneId();
     }
 
     @Override

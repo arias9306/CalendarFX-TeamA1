@@ -17,13 +17,16 @@
 package com.calendarfx.view.popover;
 
 import com.calendarfx.model.Entry;
-import com.calendarfx.util.Util;
+import com.calendarfx.view.DateControl;
 import com.calendarfx.view.Messages;
 import com.calendarfx.view.RecurrenceView;
 import com.calendarfx.view.TimeField;
+import impl.com.calendarfx.view.ZoneIdStringConverter;
+import impl.com.calendarfx.view.util.Util;
+import javafx.beans.InvalidationListener;
+import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.Bindings;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
+import javafx.collections.transformation.SortedList;
 import javafx.geometry.HPos;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
@@ -38,57 +41,79 @@ import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.util.StringConverter;
 
 import java.time.ZoneId;
-import java.util.Comparator;
-import java.util.Set;
 
 public class EntryDetailsView extends EntryPopOverPane {
 
     private final Label summaryLabel;
     private final MenuButton recurrenceButton;
+    private final TimeField startTimeField = new TimeField();
+    private final TimeField endTimeField = new TimeField();
+    private final DatePicker startDatePicker = new DatePicker();
+    private final DatePicker endDatePicker = new DatePicker();
+    private final ComboBox<ZoneId> zoneBox = new ComboBox<>();
+    private final Entry<?> entry;
 
-    public EntryDetailsView(Entry<?> entry) {
+    private boolean updatingFields;
+
+    private final InvalidationListener entryIntervalListener = it -> {
+        updatingFields = true;
+        try {
+            Entry<?> entry = getEntry();
+            startTimeField.setValue(entry.getStartTime());
+            endTimeField.setValue(entry.getEndTime());
+            startDatePicker.setValue(entry.getStartDate());
+            endDatePicker.setValue(entry.getEndDate());
+            zoneBox.setValue(entry.getZoneId());
+        } finally {
+            updatingFields = false;
+        }
+    };
+
+    private final WeakInvalidationListener weakEntryIntervalListener = new WeakInvalidationListener(entryIntervalListener);
+
+    private final InvalidationListener recurrenceRuleListener = it -> updateRecurrenceRuleButton(getEntry());
+
+    private final WeakInvalidationListener weakRecurrenceRuleListener = new WeakInvalidationListener(recurrenceRuleListener);
+
+    private final InvalidationListener updateSummaryLabelListener = it -> updateSummaryLabel(getEntry());
+
+    private final WeakInvalidationListener weakUpdateSummaryLabelListener = new WeakInvalidationListener(updateSummaryLabelListener);
+
+    public EntryDetailsView(Entry<?> entry, DateControl dateControl) {
         super();
+
+        this.entry = entry;
 
         getStyleClass().add("entry-details-view");
 
-        Label fullDayLabel = new Label(Messages.getString("EntryDetailsView.FULL_DAY")); //$NON-NLS-1$
-        Label startDateLabel = new Label(Messages.getString("EntryDetailsView.FROM")); //$NON-NLS-1$
-        Label endDateLabel = new Label(Messages.getString("EntryDetailsView.TO")); //$NON-NLS-1$
-        Label recurrentLabel = new Label(Messages.getString("EntryDetailsView.REPEAT")); //$NON-NLS-1$
+        Label fullDayLabel = new Label(Messages.getString("EntryDetailsView.FULL_DAY"));
+        Label startDateLabel = new Label(Messages.getString("EntryDetailsView.FROM"));
+        Label endDateLabel = new Label(Messages.getString("EntryDetailsView.TO"));
+        Label recurrentLabel = new Label(Messages.getString("EntryDetailsView.REPEAT"));
 
         summaryLabel = new Label();
-        summaryLabel.getStyleClass().add("recurrence-summary-label"); //$NON-NLS-1$
+        summaryLabel.getStyleClass().add("recurrence-summary-label");
         summaryLabel.setWrapText(true);
         summaryLabel.setMaxWidth(300);
 
         CheckBox fullDay = new CheckBox();
         fullDay.disableProperty().bind(entry.getCalendar().readOnlyProperty());
 
-        TimeField startTimeField = new TimeField();
         startTimeField.setValue(entry.getStartTime());
         startTimeField.disableProperty().bind(entry.getCalendar().readOnlyProperty());
 
-        TimeField endTimeField = new TimeField();
         endTimeField.setValue(entry.getEndTime());
         endTimeField.disableProperty().bind(entry.getCalendar().readOnlyProperty());
 
-        DatePicker startDatePicker = new DatePicker();
         startDatePicker.setValue(entry.getStartDate());
         startDatePicker.disableProperty().bind(entry.getCalendar().readOnlyProperty());
 
-        DatePicker endDatePicker = new DatePicker();
         endDatePicker.setValue(entry.getEndDate());
         endDatePicker.disableProperty().bind(entry.getCalendar().readOnlyProperty());
 
-        entry.intervalProperty().addListener(it -> {
-            startTimeField.setValue(entry.getStartTime());
-            endTimeField.setValue(entry.getEndTime());
-            startDatePicker.setValue(entry.getStartDate());
-            endDatePicker.setValue(entry.getEndDate());
-        });
+        entry.intervalProperty().addListener(weakEntryIntervalListener);
 
         HBox startDateBox = new HBox(10);
         HBox endDateBox = new HBox(10);
@@ -103,56 +128,43 @@ public class EntryDetailsView extends EntryPopOverPane {
         startDatePicker.setValue(entry.getStartDate());
         endDatePicker.setValue(entry.getEndDate());
 
-        Set<String> availableZoneIds = ZoneId.getAvailableZoneIds();
-        ObservableList<ZoneId> zoneIds = FXCollections.observableArrayList();
-        for (String id : availableZoneIds) {
-            ZoneId zoneId = ZoneId.of(id);
-            if (!zoneIds.contains(zoneId)) {
-                zoneIds.add(zoneId);
-            }
-        }
+        Label zoneLabel = new Label(Messages.getString("EntryDetailsView.TIMEZONE"));
+        zoneLabel.visibleProperty().bind(dateControl.enableTimeZoneSupportProperty());
+        zoneLabel.managedProperty().bind(dateControl.enableTimeZoneSupportProperty());
 
-        zoneIds.sort(Comparator.comparing(ZoneId::getId));
+        SortedList<ZoneId> sortedZones = new SortedList<>(dateControl.getAvailableZoneIds());
+        sortedZones.setComparator(new ZoneIdComparator());
 
-        Label zoneLabel = new Label(Messages.getString("EntryDetailsView.TIMEZONE")); //$NON-NLS-1$
-
-        ComboBox<ZoneId> zoneBox = new ComboBox<>(zoneIds);
+        zoneBox.setItems(sortedZones);
         zoneBox.disableProperty().bind(entry.getCalendar().readOnlyProperty());
-        zoneBox.setConverter(new StringConverter<ZoneId>() {
-
-            @Override
-            public String toString(ZoneId object) {
-                return object.getId();
-            }
-
-            @Override
-            public ZoneId fromString(String string) {
-                return null;
-            }
-        });
+        zoneBox.setConverter(new ZoneIdStringConverter());
         zoneBox.setValue(entry.getZoneId());
+        zoneBox.visibleProperty().bind(dateControl.enableTimeZoneSupportProperty());
+        zoneBox.managedProperty().bind(dateControl.enableTimeZoneSupportProperty());
 
-        recurrenceButton = new MenuButton(Messages.getString("EntryDetailsView.MENU_BUTTON_NONE")); //$NON-NLS-1$
+        recurrenceButton = new MenuButton(Messages.getString("EntryDetailsView.MENU_BUTTON_NONE"));
 
-        MenuItem none = new MenuItem(Messages.getString("EntryDetailsView.MENU_ITEM_NONE")); //$NON-NLS-1$
-        MenuItem everyDay = new MenuItem(Messages.getString("EntryDetailsView.MENU_ITEM_EVERY_DAY")); //$NON-NLS-1$
-        MenuItem everyWeek = new MenuItem(Messages.getString("EntryDetailsView.MENU_ITEM_EVERY_WEEK")); //$NON-NLS-1$
-        MenuItem everyMonth = new MenuItem(Messages.getString("EntryDetailsView.MENU_ITEM_EVERY_MONTH")); //$NON-NLS-1$
-        MenuItem everyYear = new MenuItem(Messages.getString("EntryDetailsView.MENU_ITEM_EVERY_YEAR")); //$NON-NLS-1$
-        MenuItem custom = new MenuItem(Messages.getString("EntryDetailsView.MENU_ITEM_CUSTOM")); //$NON-NLS-1$
+        MenuItem none = new MenuItem(Messages.getString("EntryDetailsView.MENU_ITEM_NONE"));
+        MenuItem everyDay = new MenuItem(Messages.getString("EntryDetailsView.MENU_ITEM_EVERY_DAY"));
+        MenuItem everyWeek = new MenuItem(Messages.getString("EntryDetailsView.MENU_ITEM_EVERY_WEEK"));
+        MenuItem everyMonth = new MenuItem(Messages.getString("EntryDetailsView.MENU_ITEM_EVERY_MONTH"));
+        MenuItem everyYear = new MenuItem(Messages.getString("EntryDetailsView.MENU_ITEM_EVERY_YEAR"));
+        MenuItem custom = new MenuItem(Messages.getString("EntryDetailsView.MENU_ITEM_CUSTOM"));
 
         none.setOnAction(evt -> updateRecurrenceRule(entry, null));
-        everyDay.setOnAction(evt -> updateRecurrenceRule(entry, "RRULE:FREQ=DAILY")); //$NON-NLS-1$
-        everyWeek.setOnAction(evt -> updateRecurrenceRule(entry, "RRULE:FREQ=WEEKLY")); //$NON-NLS-1$
-        everyMonth.setOnAction(evt -> updateRecurrenceRule(entry, "RRULE:FREQ=MONTHLY")); //$NON-NLS-1$
-        everyYear.setOnAction(evt -> updateRecurrenceRule(entry, "RRULE:FREQ=YEARLY")); //$NON-NLS-1$
+        everyDay.setOnAction(evt -> updateRecurrenceRule(entry, "RRULE:FREQ=DAILY"));
+        everyWeek.setOnAction(evt -> updateRecurrenceRule(entry, "RRULE:FREQ=WEEKLY"));
+        everyMonth.setOnAction(evt -> updateRecurrenceRule(entry, "RRULE:FREQ=MONTHLY"));
+        everyYear.setOnAction(evt -> updateRecurrenceRule(entry, "RRULE:FREQ=YEARLY"));
         custom.setOnAction(evt -> showRecurrenceEditor(entry));
 
         recurrenceButton.getItems().setAll(none, everyDay, everyWeek, everyMonth, everyYear, new SeparatorMenuItem(), custom);
         recurrenceButton.disableProperty().bind(entry.getCalendar().readOnlyProperty());
 
+        EntryMapView mapView = new EntryMapView(entry);
+
         GridPane box = new GridPane();
-        box.getStyleClass().add("content"); //$NON-NLS-1$
+        box.getStyleClass().add("content");
         box.add(fullDayLabel, 0, 0);
         box.add(fullDay, 1, 0);
         box.add(startDateLabel, 0, 1);
@@ -164,6 +176,7 @@ public class EntryDetailsView extends EntryPopOverPane {
         box.add(recurrentLabel, 0, 4);
         box.add(recurrenceButton, 1, 4);
         box.add(summaryLabel, 1, 5);
+        box.add(mapView, 1, 6);
 
         GridPane.setFillWidth(zoneBox, true);
         GridPane.setHgrow(zoneBox, Priority.ALWAYS);
@@ -182,39 +195,76 @@ public class EntryDetailsView extends EntryPopOverPane {
         endTimeField.visibleProperty().bind(Bindings.not(entry.fullDayProperty()));
 
         // start date and time
-        startDatePicker.valueProperty().addListener(evt -> entry.changeStartDate(startDatePicker.getValue(), true));
-        startTimeField.valueProperty().addListener(evt -> entry.changeStartTime(startTimeField.getValue(), true));
+        startDatePicker.valueProperty().addListener((obs, oldValue, newValue) -> {
+            if (!updatingFields) {
+                // Work-Around for DatePicker bug introduced with 18+9 ("commit on focus lost").
+                startDatePicker.getEditor().setText(startDatePicker.getConverter().toString(newValue));
+                entry.changeStartDate(newValue, true);
+            }
+        });
+
+        startTimeField.valueProperty().addListener((obs, oldValue, newValue) -> {
+            if (!updatingFields) {
+                entry.changeStartTime(newValue, true);
+            }
+        });
 
         // end date and time
-        endDatePicker.valueProperty().addListener(evt -> entry.changeEndDate(endDatePicker.getValue(), false));
-        endTimeField.valueProperty().addListener(evt -> entry.changeEndTime(endTimeField.getValue(), false));
+        endDatePicker.valueProperty().addListener((obs, oldValue, newValue) -> {
+            if (!updatingFields) {
+                // Work-Around for DatePicker bug introduced with 18+9 ("commit on focus lost").
+                endDatePicker.getEditor().setText(endDatePicker.getConverter().toString(newValue));
+                entry.changeEndDate(newValue, false);
+            }
+        });
+
+        endTimeField.valueProperty().addListener((obs, oldValue, newValue) -> {
+            if (!updatingFields) {
+                entry.changeEndTime(newValue, false);
+            }
+        });
+
+        zoneBox.valueProperty().addListener((obs, oldValue, newValue) -> {
+            if (!updatingFields && zoneBox.getValue() != null) {
+                entry.changeZoneId(newValue);
+            }
+        });
 
         // full day
         fullDay.setOnAction(evt -> entry.setFullDay(fullDay.isSelected()));
 
-        // zone Id
-        zoneBox.setOnAction(evt -> entry.setZoneId(zoneBox.getValue()));
-
-        entry.recurrenceRuleProperty().addListener(it -> updateRecurrenceRuleButton(entry));
+        entry.recurrenceRuleProperty().addListener(weakRecurrenceRuleListener);
 
         updateRecurrenceRuleButton(entry);
+        updateSummaryLabel(entry);
 
-        entry.recurrenceRuleProperty().addListener(it -> updateSummaryLabel(entry));
+        entry.recurrenceRuleProperty().addListener(weakUpdateSummaryLabelListener);
+    }
+
+    public final Entry<?> getEntry() {
+        return entry;
     }
 
     private void updateSummaryLabel(Entry<?> entry) {
         String rule = entry.getRecurrenceRule();
-        String text = Util.convertRFC2445ToText(rule,
-                entry.getStartDate());
-        summaryLabel.setText(text);
+        if (rule != null && !rule.trim().equals("")) {
+            String text = Util.convertRFC2445ToText(rule, entry.getStartDate());
+            summaryLabel.setText(text);
+            summaryLabel.setVisible(true);
+            summaryLabel.setManaged(true);
+        } else {
+            summaryLabel.setText("");
+            summaryLabel.setVisible(false);
+            summaryLabel.setManaged(false);
+        }
     }
 
     private void showRecurrenceEditor(Entry<?> entry) {
         RecurrencePopup popup = new RecurrencePopup();
         RecurrenceView recurrenceView = popup.getRecurrenceView();
         String recurrenceRule = entry.getRecurrenceRule();
-        if (recurrenceRule == null || recurrenceRule.trim().equals("")) { //$NON-NLS-1$
-            recurrenceRule = "RRULE:FREQ=DAILY;"; //$NON-NLS-1$
+        if (recurrenceRule == null || recurrenceRule.trim().equals("")) {
+            recurrenceRule = "RRULE:FREQ=DAILY;";
         }
         recurrenceView.setRecurrenceRule(recurrenceRule);
         popup.setOnOkPressed(evt -> {
@@ -222,8 +272,7 @@ public class EntryDetailsView extends EntryPopOverPane {
             entry.setRecurrenceRule(rrule);
         });
 
-        Point2D anchor = recurrenceButton.localToScreen(0,
-                recurrenceButton.getHeight());
+        Point2D anchor = recurrenceButton.localToScreen(0, recurrenceButton.getHeight());
         popup.show(recurrenceButton, anchor.getX(), anchor.getY());
     }
 
@@ -234,23 +283,23 @@ public class EntryDetailsView extends EntryPopOverPane {
     private void updateRecurrenceRuleButton(Entry<?> entry) {
         String rule = entry.getRecurrenceRule();
         if (rule == null) {
-            recurrenceButton.setText(Messages.getString("EntryDetailsView.NONE")); //$NON-NLS-1$
+            recurrenceButton.setText(Messages.getString("EntryDetailsView.NONE"));
         } else {
             switch (rule.trim().toUpperCase()) {
-                case "RRULE:FREQ=DAILY": //$NON-NLS-1$
-                    recurrenceButton.setText(Messages.getString("EntryDetailsView.DAILY")); //$NON-NLS-1$
+                case "RRULE:FREQ=DAILY":
+                    recurrenceButton.setText(Messages.getString("EntryDetailsView.DAILY"));
                     break;
-                case "RRULE:FREQ=WEEKLY": //$NON-NLS-1$
-                    recurrenceButton.setText(Messages.getString("EntryDetailsView.WEEKLY")); //$NON-NLS-1$
+                case "RRULE:FREQ=WEEKLY":
+                    recurrenceButton.setText(Messages.getString("EntryDetailsView.WEEKLY"));
                     break;
-                case "RRULE:FREQ=MONTHLY": //$NON-NLS-1$
-                    recurrenceButton.setText(Messages.getString("EntryDetailsView.MONTHLY")); //$NON-NLS-1$
+                case "RRULE:FREQ=MONTHLY":
+                    recurrenceButton.setText(Messages.getString("EntryDetailsView.MONTHLY"));
                     break;
-                case "RRULE:FREQ=YEARLY": //$NON-NLS-1$
-                    recurrenceButton.setText(Messages.getString("EntryDetailsView.YEARLY")); //$NON-NLS-1$
+                case "RRULE:FREQ=YEARLY":
+                    recurrenceButton.setText(Messages.getString("EntryDetailsView.YEARLY"));
                     break;
                 default:
-                    recurrenceButton.setText(Messages.getString("EntryDetailsView.CUSTOM")); //$NON-NLS-1$
+                    recurrenceButton.setText(Messages.getString("EntryDetailsView.CUSTOM"));
                     break;
             }
         }

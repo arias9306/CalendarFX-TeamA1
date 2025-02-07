@@ -51,38 +51,7 @@ public abstract class PageBase extends DateControl {
          * their content then they should react responsive and hide some of the content.
          */
         setMinSize(0, 0);
-        getStyleClass().add("calendar-page"); //$NON-NLS-1$
-    }
-
-    private final BooleanProperty hidden = new SimpleBooleanProperty(this, "hidden", false);
-
-    /**
-     * A property used to indicate whether the page should be shown to the user or not. Not
-     * every application requires all available pages (day, week, month, year) to be accessible
-     * to the user.
-     *
-     * @return true if the page should not be shown to the user
-     */
-    public final BooleanProperty hiddenProperty() {
-        return hidden;
-    }
-
-    /**
-     * Sets the value of {@link #hiddenProperty()}.
-     *
-     * @param hidden true if the page should be hidden
-     */
-    public final void setHidden(boolean hidden) {
-        hiddenProperty().set(hidden);
-    }
-
-    /**
-     * Returns the value of {@link #hiddenProperty()}.
-     *
-     * @return true if the page will be hidden
-     */
-    public final boolean isHidden() {
-        return hiddenProperty().get();
+        getStyleClass().add("calendar-page");
     }
 
     /**
@@ -95,8 +64,7 @@ public abstract class PageBase extends DateControl {
         return null;
     }
 
-    private final ObjectProperty<DateTimeFormatter> dateTimeFormatter = new SimpleObjectProperty<>(
-            this, "datePattern", DateTimeFormatter.ofLocalizedDate(MEDIUM)); //$NON-NLS-1$
+    private final ObjectProperty<DateTimeFormatter> dateTimeFormatter = new SimpleObjectProperty<>(this, "datePattern", DateTimeFormatter.ofLocalizedDate(MEDIUM));
 
     /**
      * A formatter for the date shown in the upper right corner. Each page has
@@ -130,7 +98,7 @@ public abstract class PageBase extends DateControl {
     }
 
     private final BooleanProperty showDate = new SimpleBooleanProperty(this,
-            "showDate", true); //$NON-NLS-1$
+            "showDate", true);
 
     /**
      * Determines whether the date will be shown by the page in the upper right
@@ -157,12 +125,11 @@ public abstract class PageBase extends DateControl {
      *
      * @return true if the date will be shown
      */
-    public final boolean isShowDateHeader() {
+    public final boolean isShowDate() {
         return showDateProperty().get();
     }
 
-    private final BooleanProperty showNavigation = new SimpleBooleanProperty(
-            this, "showNavigation", true); //$NON-NLS-1$
+    private final BooleanProperty showNavigation = new SimpleBooleanProperty(this, "showNavigation", true);
 
     /**
      * Determines if the navigation controls for going back and forward in time
@@ -200,7 +167,7 @@ public abstract class PageBase extends DateControl {
      */
     public abstract ViewType getPrintViewType();
 
-    private final String PAGE_BASE_CATEGORY = "Page Base"; //$NON-NLS-1$
+    private final String PAGE_BASE_CATEGORY = "Page Base";
 
     @Override
     public ObservableList<Item> getPropertySheetItems() {
@@ -230,12 +197,12 @@ public abstract class PageBase extends DateControl {
 
             @Override
             public String getName() {
-                return "Show Navigation"; //$NON-NLS-1$
+                return "Show Navigation";
             }
 
             @Override
             public String getDescription() {
-                return "Navigation controls (back, forward, today)"; //$NON-NLS-1$
+                return "Navigation controls (back, forward, today)";
             }
 
             @Override
@@ -258,7 +225,7 @@ public abstract class PageBase extends DateControl {
 
             @Override
             public Object getValue() {
-                return isShowDateHeader();
+                return isShowDate();
             }
 
             @Override
@@ -268,12 +235,12 @@ public abstract class PageBase extends DateControl {
 
             @Override
             public String getName() {
-                return "Show Date"; //$NON-NLS-1$
+                return "Show Date";
             }
 
             @Override
             public String getDescription() {
-                return "Header with current month, day, or year."; //$NON-NLS-1$
+                return "Header with current month, day, or year.";
             }
 
             @Override
@@ -306,50 +273,12 @@ public abstract class PageBase extends DateControl {
 
             @Override
             public String getName() {
-                return "Date Time Formatter"; //$NON-NLS-1$
+                return "Date Time Formatter";
             }
 
             @Override
             public String getDescription() {
-                return "Date time formatter"; //$NON-NLS-1$
-            }
-
-            @Override
-            public String getCategory() {
-                return PAGE_BASE_CATEGORY;
-            }
-        });
-
-        items.add(new Item() {
-
-            @Override
-            public Optional<ObservableValue<?>> getObservableValue() {
-                return Optional.of(hiddenProperty());
-            }
-
-            @Override
-            public void setValue(Object value) {
-                setHidden((boolean) value);
-            }
-
-            @Override
-            public Object getValue() {
-                return isHidden();
-            }
-
-            @Override
-            public Class<?> getType() {
-                return Boolean.class;
-            }
-
-            @Override
-            public String getName() {
-                return "Hidden"; //$NON-NLS-1$
-            }
-
-            @Override
-            public String getDescription() {
-                return "Hides the page from the user."; //$NON-NLS-1$
+                return "Date time formatter";
             }
 
             @Override

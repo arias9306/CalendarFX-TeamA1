@@ -25,8 +25,6 @@ import com.calendarfx.view.MonthView;
 import com.calendarfx.view.TimeScaleView;
 import com.calendarfx.view.YearMonthView;
 import com.calendarfx.view.print.ViewType;
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
-import de.jensd.fx.glyphs.fontawesome.utils.FontAwesomeIconFactory;
 import impl.com.calendarfx.view.page.DayPageSkin;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
@@ -40,10 +38,11 @@ import javafx.scene.control.Skin;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
-import javafx.scene.text.Text;
 import org.controlsfx.control.PropertySheet;
 import org.controlsfx.control.PropertySheet.Item;
 import org.controlsfx.control.SegmentedButton;
+import org.kordamp.ikonli.fontawesome.FontAwesome;
+import org.kordamp.ikonli.javafx.FontIcon;
 
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
@@ -55,15 +54,15 @@ import static java.util.Objects.requireNonNull;
  * The view consists of the page "chrome" inherited from the superclass, a
  * {@link DayView}, an {@link AllDayView}, a {@link TimeScaleView}, a
  * {@link YearMonthView} for picking a new date, and an {@link AgendaView}.
- * <p/>
- * <center><img width="100%" src="doc-files/day-page.png"></center>
+ *
+ * <img width="100%" src="doc-files/day-page.png" alt="Day Page">
  */
 public class DayPage extends PageBase {
 
-    private AgendaView agendaView;
-    private YearMonthView yearMonthView;
-    private DetailedDayView detailedDayView;
-    private Node toolBarControls;
+    private final AgendaView agendaView;
+    private final YearMonthView yearMonthView;
+    private final DetailedDayView detailedDayView;
+    private final Node toolBarControls;
     private HBox toolbarControls;
 
     /**
@@ -72,10 +71,10 @@ public class DayPage extends PageBase {
     public DayPage() {
         super();
 
-        getStyleClass().add("day-page"); //$NON-NLS-1$
+        getStyleClass().add("day-page");
 
         setDateTimeFormatter(
-                DateTimeFormatter.ofPattern(Messages.getString("DayPage.DATE_FORMATTER"))); //$NON-NLS-1$
+                DateTimeFormatter.ofPattern(Messages.getString("DayPage.DATE_FORMATTER")));
 
         this.agendaView = new AgendaView();
         this.yearMonthView = new YearMonthView();
@@ -93,23 +92,34 @@ public class DayPage extends PageBase {
         return toolBarControls;
     }
 
-    private Node createToolBarControls() {
-        ToggleButton agendaOnlyButton = new ToggleButton();
-        ToggleButton dayOnlyButton = new ToggleButton();
-        ToggleButton standardButton = new ToggleButton();
-
-        Text listIcon = FontAwesomeIconFactory.get().createIcon(FontAwesomeIcon.LIST);
+    /**
+     * Creates the node used for the page-specific part of the calendar
+     * view.
+     *
+     * @return the toolbar controls specific for this page
+     */
+    protected Node createToolBarControls() {
+        FontIcon listIcon = new FontIcon(FontAwesome.LIST);
         listIcon.getStyleClass().addAll("button-icon");
+
+        ToggleButton agendaOnlyButton = new ToggleButton();
+        agendaOnlyButton.setMaxHeight(Double.MAX_VALUE);
         agendaOnlyButton.setGraphic(listIcon);
         agendaOnlyButton.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
 
-        Text calendarIcon = FontAwesomeIconFactory.get().createIcon(FontAwesomeIcon.CALENDAR);
+        FontIcon calendarIcon = new FontIcon(FontAwesome.CALENDAR);
         calendarIcon.getStyleClass().addAll("button-icon");
+
+        ToggleButton dayOnlyButton = new ToggleButton();
+        dayOnlyButton.setMaxHeight(Double.MAX_VALUE);
         dayOnlyButton.setGraphic(calendarIcon);
         dayOnlyButton.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
 
-        Text standardIcon = FontAwesomeIconFactory.get().createIcon(FontAwesomeIcon.COLUMNS);
+        FontIcon standardIcon = new FontIcon(FontAwesome.COLUMNS);
         standardIcon.getStyleClass().addAll("button-icon");
+
+        ToggleButton standardButton = new ToggleButton();
+        standardButton.setMaxHeight(Double.MAX_VALUE);
         standardButton.setGraphic(standardIcon);
         standardButton.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
 
@@ -118,21 +128,24 @@ public class DayPage extends PageBase {
         standardButton.setOnAction(evt -> setDayPageLayout(DayPageLayout.STANDARD));
 
         SegmentedButton segmentedButton = new SegmentedButton(agendaOnlyButton, standardButton, dayOnlyButton);
-        segmentedButton.getStyleClass().add("layout-button"); //$NON-NLS-1$
+        segmentedButton.getStyleClass().add("layout-button");
         segmentedButton.visibleProperty().bind(showDayPageLayoutControlsProperty());
+        segmentedButton.setMaxHeight(Double.MAX_VALUE);
 
         updateDayPageLayoutButtons(agendaOnlyButton, dayOnlyButton, standardButton);
         dayPageLayout.addListener((observable, oldValue, newValue) -> updateDayPageLayoutButtons(agendaOnlyButton, dayOnlyButton, standardButton));
 
-        agendaOnlyButton.setTooltip(new Tooltip(Messages.getString("DayPage.TOOLTIP_MAXIMIZE_AGENDA_LIST"))); //$NON-NLS-1$
-        dayOnlyButton.setTooltip(new Tooltip(Messages.getString("DayPage.TOOLTIP_MAXIMIZE_DAY_VIEW"))); //$NON-NLS-1$
-        standardButton.setTooltip(new Tooltip(Messages.getString("DayPage.TOOLTIP_STANDARD_LAYOUT"))); //$NON-NLS-1$
+        agendaOnlyButton.setTooltip(new Tooltip(Messages.getString("DayPage.TOOLTIP_MAXIMIZE_AGENDA_LIST")));
+        dayOnlyButton.setTooltip(new Tooltip(Messages.getString("DayPage.TOOLTIP_MAXIMIZE_DAY_VIEW")));
+        standardButton.setTooltip(new Tooltip(Messages.getString("DayPage.TOOLTIP_STANDARD_LAYOUT")));
+
+        FontIcon layoutIcon = new FontIcon(FontAwesome.TABLE);
+        layoutIcon.getStyleClass().addAll("button-icon", "layout-button-icon");
 
         ToggleButton layoutButton = new ToggleButton();
-        layoutButton.setTooltip(new Tooltip(Messages.getString("DayPage.TOOLTIP_LAYOUT"))); //$NON-NLS-1$
+        layoutButton.setMaxHeight(Double.MAX_VALUE);
+        layoutButton.setTooltip(new Tooltip(Messages.getString("DayPage.TOOLTIP_LAYOUT")));
         layoutButton.setId("layout-button");
-        Text layoutIcon = FontAwesomeIconFactory.get().createIcon(FontAwesomeIcon.TABLE);
-        layoutIcon.getStyleClass().addAll("button-icon", "layout-button-icon"); //$NON-NLS-1$ //$NON-NLS-2$
         layoutButton.setGraphic(layoutIcon);
         layoutButton.setSelected(getLayout().equals(Layout.SWIMLANE));
         layoutButton.setOnAction(evt -> {
@@ -232,7 +245,7 @@ public class DayPage extends PageBase {
     }
 
     private final ObjectProperty<DayPageLayout> dayPageLayout = new SimpleObjectProperty<>(
-            this, "dayPageLayout", DayPageLayout.STANDARD); //$NON-NLS-1$
+            this, "dayPageLayout", DayPageLayout.STANDARD);
 
     /**
      * Stores the currently requested layout for the {@link DayPage}. The layout
@@ -268,7 +281,7 @@ public class DayPage extends PageBase {
     }
 
     private final BooleanProperty showDayPageLayoutControls = new SimpleBooleanProperty(
-            this, "showDayPageLayoutControls", true); //$NON-NLS-1$
+            this, "showDayPageLayoutControls", true);
 
     /**
      * Determines if the controls for switching between different layouts of
@@ -341,7 +354,7 @@ public class DayPage extends PageBase {
         return ViewType.DAY_VIEW;
     }
 
-    private static final String DAY_PAGE_CATEGORY = "Day Page"; //$NON-NLS-1$
+    private static final String DAY_PAGE_CATEGORY = "Day Page";
 
     @Override
     public ObservableList<Item> getPropertySheetItems() {
@@ -371,12 +384,12 @@ public class DayPage extends PageBase {
 
             @Override
             public String getName() {
-                return "Day Page Layout"; //$NON-NLS-1$
+                return "Day Page Layout";
             }
 
             @Override
             public String getDescription() {
-                return "Layout of the day page"; //$NON-NLS-1$
+                return "Layout of the day page";
             }
 
             @Override
@@ -409,12 +422,12 @@ public class DayPage extends PageBase {
 
             @Override
             public String getName() {
-                return "Day Page Layout Controls"; //$NON-NLS-1$
+                return "Day Page Layout Controls";
             }
 
             @Override
             public String getDescription() {
-                return "Show Day Page Layout Controls"; //$NON-NLS-1$
+                return "Show Day Page Layout Controls";
             }
 
             @Override
@@ -447,12 +460,12 @@ public class DayPage extends PageBase {
 
             @Override
             public String getName() {
-                return "Layout Button"; //$NON-NLS-1$
+                return "Layout Button";
             }
 
             @Override
             public String getDescription() {
-                return "Can the user access the button to toggle the layout or not."; //$NON-NLS-1$
+                return "Can the user access the button to toggle the layout or not.";
             }
 
             @Override

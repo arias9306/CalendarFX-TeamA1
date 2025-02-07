@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.calendarfx</groupId>
     <artifactId>calendar</artifactId>
-    <version>8.6.1</version>
+    <version>11.12.7</version>
     <packaging>pom</packaging>
     <name>CalendarFX</name>
     <description>The parent project for the various CalendarFX modules.
@@ -13,57 +13,324 @@
         <name>Dirk Lemmermann Software &amp; Consulting</name>
     </organization>
 
-    <url>https://github.com/dlemmermann/CalendarFX</url>
+    <parent>
+        <groupId>com.dlsc</groupId>
+        <artifactId>dlsc-maven-parent</artifactId>
+        <version>1.2.0</version>
+    </parent>
+
+    <url>https://github.com/dlsc-software-consulting-gmbh/CalendarFX</url>
+
+    <properties>
+        <project.identifier>calendarfx</project.identifier>
+        <project.github.repository>dlsc-software-consulting-gmbh/CalendarFX
+        </project.github.repository>
+        <local.repository.path>/tmp/repository</local.repository.path>
+        <java.version>11</java.version>
+        <javafx.version>19</javafx.version>
+        <ikonli.version>12.3.1</ikonli.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <javafx.maven.plugin.version>0.0.8</javafx.maven.plugin.version>
+        <controlsfx.version>11.1.1</controlsfx.version>
+        <ical4j.version>4.0.0-rc5</ical4j.version>
+        <sonar.projectKey>dlsc-software-consulting-gmbh_CalendarFX2
+        </sonar.projectKey>
+        <sonar.organization>dlsc-software-consulting-gmbh</sonar.organization>
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <sonar.moduleKey>${project.artifactId}</sonar.moduleKey>
+    </properties>
+
     <licenses>
         <license>
             <name>Apache 2.0</name>
         </license>
     </licenses>
+
     <scm>
-        <url>https://github.com/dlemmermann/CalendarFX</url>
+        <url>https://github.com/dlsc-software-consulting-gmbh/CalendarFX</url>
     </scm>
 
     <developers>
         <developer>
             <name>Dirk Lemmermann</name>
-            <email>dlemmermann@gmail.com</email>
-            <organization>DLSC</organization>
+            <url>https://www.dlsc.com</url>
+            <organization>DLSC Software &amp; Consulting</organization>
         </developer>
     </developers>
 
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
     <modules>
-        <module>CalendarFXRecurrence</module>
-        <module>CalendarFXSampler</module>
         <module>CalendarFXView</module>
-        <module>CalendarFXExperimental</module>
-        <module>CalendarFXGoogle</module>
-        <module>CalendarFXApp</module>
-        <module>CalendarFXiCal</module>
-        <module>CalendarFXWeather</module>
-        <module>CalendarFXAssembly</module>
     </modules>
 
-    <distributionManagement>
-        <repository>
-            <id>bintray-dlsc-oss-repository</id>
-            <name>dlsc-oss-repository</name>
-            <url>https://api.bintray.com/maven/dlsc-oss/repository/CalendarFX/;publish=1</url>
-        </repository>
-    </distributionManagement>
+    <profiles>
+        <profile>
+            <id>all-modules</id>
+            <activation>
+                <property>
+                    <name>release</name>
+                    <value>!true</value>
+                </property>
+            </activation>
+            <modules>
+                <module>CalendarFXSampler</module>
+                <module>CalendarFXGoogle</module>
+                <module>CalendarFXApp</module>
+                <module>CalendarFXSchedulerApp</module>
+                <module>CalendarFXResourceApp</module>
+                <module>CalendarFXiCal</module>
+                <module>CalendarFXWeather</module>
+            </modules>
+        </profile>
+    </profiles>
+
+    <dependencyManagement>
+        <dependencies>
+
+            <dependency>
+                <groupId>com.google.j2objc</groupId>
+                <artifactId>j2objc-annotations</artifactId>
+                <version>2.8</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-stdlib</artifactId>
+                <version>1.6.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-stdlib-common</artifactId>
+                <version>1.4.10</version>
+            </dependency>
+
+            <dependency>
+                <groupId>fr.brouillard.oss</groupId>
+                <artifactId>cssfx</artifactId>
+                <version>11.5.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.controlsfx</groupId>
+                <artifactId>fxsampler</artifactId>
+                <version>1.0.11</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kordamp.ikonli</groupId>
+                <artifactId>ikonli-javafx</artifactId>
+                <version>${ikonli.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kordamp.ikonli</groupId>
+                <artifactId>ikonli-fontawesome-pack</artifactId>
+                <version>${ikonli.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.controlsfx</groupId>
+                <artifactId>controlsfx</artifactId>
+                <version>${controlsfx.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-base</artifactId>
+                <version>${javafx.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-controls</artifactId>
+                <version>${javafx.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-graphics</artifactId>
+                <version>${javafx.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-fxml</artifactId>
+                <version>${javafx.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-media</artifactId>
+                <version>${javafx.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-web</artifactId>
+                <version>${javafx.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-swing</artifactId>
+                <version>${javafx.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.calendarfx</groupId>
+                <artifactId>view</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.calendarfx</groupId>
+                <artifactId>application</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.kordamp.ikonli</groupId>
+                <artifactId>ikonli-weathericons-pack</artifactId>
+                <version>${ikonli.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>4.13.2</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.hamcrest</groupId>
+                <artifactId>hamcrest-all</artifactId>
+                <version>1.3</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-all</artifactId>
+                <version>2.0.2-beta</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.mnode.ical4j</groupId>
+                <artifactId>ical4j</artifactId>
+                <version>${ical4j.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.dlsc</groupId>
+                <artifactId>GMapsFX</artifactId>
+                <version>11.0.6</version>
+            </dependency>
+
+            <!-- Required for GMapsFX -->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>2.0.9</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
+                <version>2.0.0-alpha5</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.api-client</groupId>
+                <artifactId>google-api-client</artifactId>
+                <version>1.30.4</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.api-client</groupId>
+                <artifactId>google-api-client-java6</artifactId>
+                <version>1.30.4</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.api-client</groupId>
+                <artifactId>google-api-client-jackson2</artifactId>
+                <version>1.30.4</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.apis</groupId>
+                <artifactId>google-api-services-calendar</artifactId>
+                <version>v3-rev20190910-1.30.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.apis</groupId>
+                <artifactId>google-api-services-oauth2</artifactId>
+                <version>v2-rev20190313-1.30.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.code.geocoder-java</groupId>
+                <artifactId>geocoder-java</artifactId>
+                <version>0.16</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.code.gson</groupId>
+                <artifactId>gson</artifactId>
+                <version>2.8.9</version>
+            </dependency>
+
+            <dependency>
+                <groupId>commons-codec</groupId>
+                <artifactId>commons-codec</artifactId>
+                <version>1.16.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.opencensus</groupId>
+                <artifactId>opencensus-api</artifactId>
+                <version>0.30.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.maps</groupId>
+                <artifactId>google-maps-services</artifactId>
+                <version>2.0.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>32.0.1-android</version>
+            </dependency>
+
+            <dependency>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
+                <version>1.2</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
 
     <build>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.7.0</version>
+                <version>3.10.1</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <release>11</release>
+                    <source>11</source>
+                    <target>11</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0-M5</version>
+                <configuration>
+                    <!-- Activate the use of TCP to transmit events to the plugin -->
+                    <forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory"/>
                 </configuration>
             </plugin>
         </plugins>
@@ -75,40 +342,20 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.11</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest-all</artifactId>
-            <version>1.3</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-all</artifactId>
-            <version>1.9.5</version>
             <scope>test</scope>
         </dependency>
 
     </dependencies>
-
-    <reporting>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.10.1</version>
-                <configuration>
-                    <windowtitle>CalendarFX API</windowtitle>
-                    <aggregate>true</aggregate>
-                    <show>protected</show>
-                    <failOnError>false</failOnError>
-                </configuration>
-            </plugin>
-        </plugins>
-    </reporting>
-
 </project>

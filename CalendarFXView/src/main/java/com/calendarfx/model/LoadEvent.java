@@ -35,7 +35,6 @@ import static java.util.Objects.requireNonNull;
  * <h2>Code Example</h2>
  * The following code snippet was taken from the Google calendar application included
  * in the distribution.
- * <br/>
  * <pre>
  * CalendarView calendarView = ...
  * calendarView.addEventFilter(LoadEvent.LOAD, evt -&gt; {
@@ -70,17 +69,17 @@ public final class LoadEvent extends Event {
      * given date range is required to be present in the calendars.
      */
     public static final EventType<LoadEvent> LOAD = new EventType<>(Event.ANY,
-            "LOAD"); //$NON-NLS-1$
+            "LOAD");
 
-    private List<CalendarSource> calendarSources;
+    private final List<CalendarSource> calendarSources;
 
-    private LocalDate startDate;
+    private final LocalDate startDate;
 
-    private LocalDate endDate;
+    private final LocalDate endDate;
 
-    private ZoneId zoneId;
+    private final ZoneId zoneId;
 
-    private String sourceName;
+    private final String sourceName;
 
     /**
      * Constructs a new load event.
@@ -179,8 +178,8 @@ public final class LoadEvent extends Event {
 
     @Override
     public String toString() {
-        return "LoadEvent [sourceName=" + sourceName + ", startDate=" //$NON-NLS-1$ //$NON-NLS-2$
-                + startDate + ", endDate=" + endDate + ", zoneId=" + zoneId //$NON-NLS-1$ //$NON-NLS-2$
-                + ", calendarSources=" + calendarSources + "]"; //$NON-NLS-1$ //$NON-NLS-2$
+        return "LoadEvent [sourceName=" + sourceName + ", startDate="
+                + startDate + ", endDate=" + endDate + ", zoneId=" + zoneId
+                + ", calendarSources=" + calendarSources + "]";
     }
 }

@@ -17,8 +17,6 @@
 package com.calendarfx.model;
 
 import com.calendarfx.view.DateControl;
-import com.google.ical.compat.javatime.LocalDateIterator;
-import com.google.ical.compat.javatime.LocalDateIteratorFactory;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -31,14 +29,15 @@ import javafx.event.Event;
 import javafx.event.EventDispatchChain;
 import javafx.event.EventHandler;
 import javafx.event.EventTarget;
+import net.fortuna.ical4j.model.Recur;
 
-import java.text.ParseException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -78,16 +77,18 @@ import static java.util.logging.Level.FINER;
  *     view.getCalendarSources().add(source);
  *     }
  * </pre>
+ *
+ * @param <T> the type of the (optional) user object
  */
-public class Calendar implements EventTarget {
+public class Calendar<T> implements EventTarget {
 
     /**
      * Predefined visual styles for calendars. The actual CSS settings for these
      * styles can be found in the framework stylesheet, prefixed with "style1-",
      * "style2-", etc. The picture below shows the colors used for the various
      * styles.
-     * <p>
-     * <center><img src="doc-files/styles.png"></center>
+     *
+     * <img src="doc-files/styles.png" alt="Styles">
      *
      * @see Calendar#setStyle(Style)
      */
@@ -134,14 +135,14 @@ public class Calendar implements EventTarget {
          * ordinal value modulo the number of elements in this enum.
          *
          * @param ordinal the ordinal value for which to return a style
-         * @return a style, guaranteed to be non null
+         * @return a style, guaranteed to be non-null
          */
         public static Style getStyle(int ordinal) {
             return Style.values()[ordinal % Style.values().length];
         }
     }
 
-    private IntervalTree<Entry<?>> intervalTree = new IntervalTree<>();
+    private final IntervalTree<Entry<?>> intervalTree = new IntervalTree<>();
 
     /**
      * Constructs a new calendar.
@@ -155,19 +156,31 @@ public class Calendar implements EventTarget {
         });
     }
 
+
+    /**
+     * Constructs a new calendar with the given name.
+     *
+     * @param name the name of the calendar
+     * @param userObject an optional user object
+     */
+    public Calendar(String name, T userObject) {
+        this();
+
+        setName(name);
+        if (name != null) {
+            setShortName(!name.isEmpty() ? name.substring(0, 1) : "");
+        }
+
+        setUserObject(userObject);
+    }
+
     /**
      * Constructs a new calendar with the given name.
      *
      * @param name the name of the calendar
      */
     public Calendar(String name) {
-        this();
-
-        setName(name);
-
-        if (name != null) {
-            setShortName(name.substring(0, 1));
-        }
+        this(name, null);
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -205,7 +218,7 @@ public class Calendar implements EventTarget {
         sourceStart = sourceStart.plus(startDelta);
         sourceEnd = sourceEnd.plus(endDelta);
 
-        return new Interval(sourceStart.toLocalDate(), sourceStart.toLocalTime(), sourceEnd.toLocalDate(), sourceEnd.toLocalTime(), source.getZoneId());
+        return new Interval(sourceStart.toLocalDate(), sourceStart.toLocalTime(), sourceEnd.toLocalDate(), sourceEnd.toLocalTime(), recurrence.getZoneId());
     }
 
     /**
@@ -284,8 +297,7 @@ public class Calendar implements EventTarget {
     @SuppressWarnings({"rawtypes", "unchecked"})
     private Map<LocalDate, List<Entry<?>>> doGetEntries(LocalDate startDate, LocalDate endDate, ZoneId zoneId) {
         if (MODEL.isLoggable(FINE)) {
-            MODEL.fine(getName() + ": getting entries from " + startDate //$NON-NLS-1$
-                    + " until " + endDate + ", zone = " + zoneId); //$NON-NLS-1$ //$NON-NLS-2$
+            MODEL.fine(getName() + ": getting entries from " + startDate + " until " + endDate + ", zone = " + zoneId);
         }
 
         ZonedDateTime st = ZonedDateTime.of(startDate, LocalTime.MIN, zoneId);
@@ -295,78 +307,54 @@ public class Calendar implements EventTarget {
 
         if (intersectingEntries.isEmpty()) {
             if (MODEL.isLoggable(FINE)) {
-                MODEL.fine(getName() + ": found no entries"); //$NON-NLS-1$
+                MODEL.fine(getName() + ": found no entries");
             }
             return Collections.emptyMap();
         }
 
         if (MODEL.isLoggable(FINE)) {
-            MODEL.fine(getName() + ": found " + intersectingEntries.size() //$NON-NLS-1$
-                    + " entries"); //$NON-NLS-1$
+            MODEL.fine(getName() + ": found " + intersectingEntries.size() + " entries");
         }
 
         Map<LocalDate, List<Entry<?>>> result = new HashMap<>();
         for (Entry<?> entry : intersectingEntries) {
 
             if (entry.isRecurring()) {
+                String recurrenceRule = entry.getRecurrenceRule().replaceFirst("^RRULE:", "");
 
-                /*
-                 * The recurring entry / entries.
-                 */
-                String recurrenceRule = entry.getRecurrenceRule();
-                if (recurrenceRule != null && !recurrenceRule.trim().equals("")) { //$NON-NLS-1$
+                LocalDate utilStartDate = entry.getStartDate();
 
-                    LocalDate utilStartDate = entry.getStartAsZonedDateTime().toLocalDate();
+                try {
+                    LocalDate utilEndDate = et.toLocalDate();
 
-                    try {
-                        LocalDate utilEndDate = et.toLocalDate();
+                    List<LocalDate> dateList = new Recur(recurrenceRule).getDates(utilStartDate, utilEndDate);
 
-                        LocalDateIterator iterator = LocalDateIteratorFactory.createLocalDateIterator(recurrenceRule, utilStartDate, zoneId, true);
+                    for (LocalDate repeatingDate : dateList) {
+                        ZonedDateTime zonedDateTime = ZonedDateTime.of(repeatingDate, LocalTime.MIN, zoneId);
 
-                        /*
-                         * TODO: for performance reasons we should definitely
-                         * use the advanceTo() call, but unfortunately this
-                         * collides with the fact that e.g. the DetailedWeekView loads
-                         * data day by day. So a given day would not show
-                         * entries that start on the day before but intersect
-                         * with the given day. We have to find a solution for
-                         * this.
-                         */
-                        // iterator.advanceTo(org.joda.time.LocalDate.fromDateFields(Date.from(st.toInstant())));
+                        Entry recurrence = entry.createRecurrence();
+                        recurrence.setId(entry.getId());
+                        recurrence.getProperties().put("com.calendarfx.recurrence.source", entry);
+                        recurrence.getProperties().put("com.calendarfx.recurrence.id", zonedDateTime.toString());
+                        recurrence.setRecurrenceRule(entry.getRecurrenceRule());
 
-                        while (iterator.hasNext()) {
-                            LocalDate repeatingDate = iterator.next();
-                            if (repeatingDate.isAfter(utilEndDate)) {
-                                break;
-                            } else {
-                                ZonedDateTime zonedDateTime = ZonedDateTime.of(repeatingDate, LocalTime.MIN, zoneId);
+                        // update the recurrence interval
+                        LocalDate recurrenceStartDate = zonedDateTime.toLocalDate();
+                        LocalDate recurrenceEndDate = recurrenceStartDate.plus(entry.getStartDate().until(entry.getEndDate()));
+                        recurrence.setInterval(entry.getInterval().withDates(recurrenceStartDate, recurrenceEndDate));
 
-                                Entry recurrence = entry.createRecurrence();
-                                recurrence.setId(entry.getId());
-                                recurrence.getProperties().put("com.calendarfx.recurrence.source", entry);
-                                recurrence.getProperties().put("com.calendarfx.recurrence.id", zonedDateTime.toString());
-                                recurrence.setRecurrenceRule(entry.getRecurrenceRule());
+                        recurrence.setUserObject(entry.getUserObject());
+                        recurrence.setTitle(entry.getTitle());
+                        recurrence.setMinimumDuration(entry.getMinimumDuration());
+                        recurrence.setFullDay(entry.isFullDay());
+                        recurrence.setLocation(entry.getLocation());
+                        recurrence.setCalendar(this);
 
-                                LocalDate recurrenceStartDate = zonedDateTime.toLocalDate();
-                                LocalDate recurrenceEndDate = recurrenceStartDate.plus(entry.getStartDate().until(entry.getEndDate()));
-
-                                Interval recurrenceInterval = entry.getInterval().withDates(recurrenceStartDate, recurrenceEndDate);
-
-                                recurrence.setInterval(recurrenceInterval);
-                                recurrence.setUserObject(entry.getUserObject());
-                                recurrence.setTitle(entry.getTitle());
-                                recurrence.setMinimumDuration(entry.getMinimumDuration());
-                                recurrence.setFullDay(entry.isFullDay());
-                                recurrence.setLocation(entry.getLocation());
-                                recurrence.setCalendar(this);
-
-                                addEntryToResult(result, recurrence, startDate, endDate);
-                            }
-                        }
-
-                    } catch (ParseException e) {
-                        e.printStackTrace();
+                        addEntryToResult(result, recurrence, startDate, endDate);
                     }
+
+                } catch (IllegalArgumentException | DateTimeParseException e) {
+                    e.printStackTrace();
                 }
             } else {
                 addEntryToResult(result, entry, startDate, endDate);
@@ -374,8 +362,7 @@ public class Calendar implements EventTarget {
         }
 
         if (MODEL.isLoggable(FINE)) {
-            MODEL.fine(getName() + ": found entries for " + result.size() //$NON-NLS-1$
-                    + " different days"); //$NON-NLS-1$
+            MODEL.fine(getName() + ": found entries for " + result.size() + " different days");
         }
 
         result.values().forEach(Collections::sort);
@@ -410,7 +397,7 @@ public class Calendar implements EventTarget {
         } while (!date.isAfter(endDate));
     }
 
-    private final ObjectProperty<Duration> lookAheadDuration = new SimpleObjectProperty<>(this, "lookAheadDuration", Duration.ofDays(730)); //$NON-NLS-1$
+    private final ObjectProperty<Duration> lookAheadDuration = new SimpleObjectProperty<>(this, "lookAheadDuration", Duration.ofDays(730));
 
     /**
      * Stores a time duration used for the entry search functionality of this
@@ -444,7 +431,7 @@ public class Calendar implements EventTarget {
         return lookAheadDurationProperty().get();
     }
 
-    private final ObjectProperty<Duration> lookBackDuration = new SimpleObjectProperty<>(this, "lookBackDuration", Duration.ofDays(730)); //$NON-NLS-1$
+    private final ObjectProperty<Duration> lookBackDuration = new SimpleObjectProperty<>(this, "lookBackDuration", Duration.ofDays(730));
 
     /**
      * Stores a time duration used for the entry search functionality of this
@@ -488,7 +475,7 @@ public class Calendar implements EventTarget {
      */
     public List<Entry<?>> findEntries(String searchText) {
         if (MODEL.isLoggable(FINE)) {
-            MODEL.fine(getName() + ": getting entries for search term: " //$NON-NLS-1$
+            MODEL.fine(getName() + ": getting entries for search term: "
                     + searchText);
         }
 
@@ -512,7 +499,7 @@ public class Calendar implements EventTarget {
         }
 
         if (MODEL.isLoggable(FINE)) {
-            MODEL.fine(getName() + ": found " + result.size() + " entries"); //$NON-NLS-1$ //$NON-NLS-2$
+            MODEL.fine(getName() + ": found " + result.size() + " entries");
         }
 
         return result;
@@ -663,7 +650,7 @@ public class Calendar implements EventTarget {
 
     final void impl_addEntry(Entry<?> entry) {
         if (entry.isRecurrence()) {
-            throw new IllegalArgumentException("a recurrence entry can not be added to a calendar"); //$NON-NLS-1$
+            throw new IllegalArgumentException("a recurrence entry can not be added to a calendar");
         }
 
         dirty = true;
@@ -673,7 +660,7 @@ public class Calendar implements EventTarget {
 
     final void impl_removeEntry(Entry<?> entry) {
         if (entry.isRecurrence()) {
-            throw new IllegalArgumentException("a recurrence entry can not be added to a calendar"); //$NON-NLS-1$
+            throw new IllegalArgumentException("a recurrence entry can not be added to a calendar");
         }
 
         dirty = true;
@@ -683,7 +670,7 @@ public class Calendar implements EventTarget {
 
     // Name support.
 
-    private final StringProperty name = new SimpleStringProperty(this, "name", "Untitled"); //$NON-NLS-1$
+    private final StringProperty name = new SimpleStringProperty(this, "name", "Untitled");
 
     /**
      * A property used to store the name of the calendar.
@@ -714,7 +701,7 @@ public class Calendar implements EventTarget {
 
     // Short name support.
 
-    private final StringProperty shortName = new SimpleStringProperty(this, "shortName", "Unt."); //$NON-NLS-1$ //$NON-NLS-2$
+    private final StringProperty shortName = new SimpleStringProperty(this, "shortName", "Unt.");
 
     /**
      * A property used to store the short name of the calendar.
@@ -745,7 +732,7 @@ public class Calendar implements EventTarget {
 
     // Style prefix support.
 
-    private final StringProperty style = new SimpleStringProperty(this, "style", //$NON-NLS-1$
+    private final StringProperty style = new SimpleStringProperty(this, "style",
             Style.STYLE1.name().toLowerCase());
 
     /**
@@ -765,13 +752,13 @@ public class Calendar implements EventTarget {
      * Sets the value of {@link #styleProperty()} based on one of the predefined
      * styles (see also the enum {@link Style}). The image below shows how the
      * styles appear in the UI.
-     * <p>
-     * <center><img src="doc-files/styles.png"></center>
+     *
+     * <img src="doc-files/styles.png" alt="Styles">
      *
      * @param style the calendar style
      */
     public final void setStyle(Style style) {
-        MODEL.finer(getName() + ": setting style to: " + style); //$NON-NLS-1$
+        MODEL.finer(getName() + ": setting style to: " + style);
         setStyle(style.name().toLowerCase());
     }
 
@@ -782,7 +769,7 @@ public class Calendar implements EventTarget {
      */
     public final void setStyle(String stylePrefix) {
         requireNonNull(stylePrefix);
-        MODEL.finer(getName() + ": setting style to: " + style); //$NON-NLS-1$
+        MODEL.finer(getName() + ": setting style to: " + style);
         styleProperty().set(stylePrefix);
     }
 
@@ -797,7 +784,7 @@ public class Calendar implements EventTarget {
 
     // Read only support.
 
-    private final BooleanProperty readOnly = new SimpleBooleanProperty(this, "readOnly", false); //$NON-NLS-1$
+    private final BooleanProperty readOnly = new SimpleBooleanProperty(this, "readOnly", false);
 
     /**
      * A property used to control if the calendar is read-only or not.
@@ -823,11 +810,11 @@ public class Calendar implements EventTarget {
      * @param readOnly the calendar can not be edited by the user if true
      */
     public final void setReadOnly(boolean readOnly) {
-        MODEL.finer(getName() + ": setting read only to: " + readOnly); //$NON-NLS-1$
+        MODEL.finer(getName() + ": setting read only to: " + readOnly);
         readOnlyProperty().set(readOnly);
     }
 
-    private ObservableList<EventHandler<CalendarEvent>> eventHandlers = FXCollections.observableArrayList();
+    private final ObservableList<EventHandler<CalendarEvent>> eventHandlers = FXCollections.observableArrayList();
 
     /**
      * Adds an event handler for calendar events. Handlers will be called when
@@ -838,7 +825,7 @@ public class Calendar implements EventTarget {
     public final void addEventHandler(EventHandler<CalendarEvent> l) {
         if (l != null) {
             if (MODEL.isLoggable(FINER)) {
-                MODEL.finer(getName() + ": adding event handler: " + l); //$NON-NLS-1$
+                MODEL.finer(getName() + ": adding event handler: " + l);
             }
             eventHandlers.add(l);
         }
@@ -852,7 +839,7 @@ public class Calendar implements EventTarget {
     public final void removeEventHandler(EventHandler<CalendarEvent> l) {
         if (l != null) {
             if (MODEL.isLoggable(FINER)) {
-                MODEL.finer(getName() + ": removing event handler: " + l); //$NON-NLS-1$
+                MODEL.finer(getName() + ": removing event handler: " + l);
             }
             eventHandlers.remove(l);
         }
@@ -869,7 +856,7 @@ public class Calendar implements EventTarget {
     public final void fireEvent(CalendarEvent evt) {
         if (fireEvents && !batchUpdates) {
             if (MODEL.isLoggable(FINER)) {
-                MODEL.finer(getName() + ": fireing event: " + evt); //$NON-NLS-1$
+                MODEL.finer(getName() + ": firing event: " + evt);
             }
 
             requireNonNull(evt);
@@ -890,9 +877,28 @@ public class Calendar implements EventTarget {
         });
     }
 
+    private final ObjectProperty<T> userObject = new SimpleObjectProperty<>(this, "userObject");
+
+    public final T getUserObject() {
+        return userObject.get();
+    }
+
+    /**
+     * An (optional) user object that can be used to link this calendar to the source
+     * of its data or the business object that it represents.
+     *
+     * @return a user object
+     */
+    public final ObjectProperty<T> userObjectProperty() {
+        return userObject;
+    }
+
+    public final void setUserObject(T userObject) {
+        this.userObject.set(userObject);
+    }
+
     @Override
     public String toString() {
-        return "Calendar [name=" + getName() + ", style=" + getStyle() //$NON-NLS-1$ //$NON-NLS-2$
-                + ", readOnly=" + isReadOnly() + "]"; //$NON-NLS-1$ //$NON-NLS-2$
+        return "Calendar [name=" + getName() + ", style=" + getStyle() + ", readOnly=" + isReadOnly() + ", " + (getUserObject() != null ? getUserObject().toString() : "null") + "]";
     }
 }

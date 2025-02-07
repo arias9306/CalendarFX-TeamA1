@@ -33,9 +33,9 @@ import java.util.Optional;
 
 /**
  * A control for editing a {@link LocalTime}.
- * <p/>
- * <center><img src="doc-files/time-field.png"></center>
- * <p/>
+ *
+ * <img src="doc-files/time-field.png" alt="Time Field">
+ *
  */
 public class TimeField extends CalendarFXControl {
 
@@ -43,6 +43,7 @@ public class TimeField extends CalendarFXControl {
      * Constructs a new field.
      */
     public TimeField() {
+        getStyleClass().add("time-field");
     }
 
     @Override
@@ -50,8 +51,7 @@ public class TimeField extends CalendarFXControl {
         return new TimeFieldSkin(this);
     }
 
-    private final BooleanProperty rollOver = new SimpleBooleanProperty(this,
-            "rollOver", true); //$NON-NLS-1$
+    private final BooleanProperty rollOver = new SimpleBooleanProperty(this, "rollOver", true);
 
     /**
      * Determines if the field for hours will jump from 23 to 0 when the user
@@ -82,8 +82,7 @@ public class TimeField extends CalendarFXControl {
         rollOver.set(roll);
     }
 
-    private final ObjectProperty<LocalTime> value = new SimpleObjectProperty<>(
-            this, "value", LocalTime.now()); //$NON-NLS-1$
+    private final ObjectProperty<LocalTime> value = new SimpleObjectProperty<>(this, "value", LocalTime.now());
 
     /**
      * The current local time value of the field.
@@ -112,7 +111,7 @@ public class TimeField extends CalendarFXControl {
         valueProperty().set(localTime);
     }
 
-    private static final String TIME_FIELD_CATEGORY = "Time Field"; //$NON-NLS-1$
+    private static final String TIME_FIELD_CATEGORY = "Time Field";
 
     /**
      * Returns a list of property items that can be shown by the
@@ -148,12 +147,12 @@ public class TimeField extends CalendarFXControl {
 
             @Override
             public String getName() {
-                return "Roll Over"; //$NON-NLS-1$
+                return "Roll Over";
             }
 
             @Override
             public String getDescription() {
-                return "Roll Over"; //$NON-NLS-1$
+                return "Roll Over";
             }
 
             @Override
@@ -186,12 +185,12 @@ public class TimeField extends CalendarFXControl {
 
             @Override
             public String getName() {
-                return "Value"; //$NON-NLS-1$
+                return "Value";
             }
 
             @Override
             public String getDescription() {
-                return "Local Time"; //$NON-NLS-1$
+                return "Local Time";
             }
 
             @Override

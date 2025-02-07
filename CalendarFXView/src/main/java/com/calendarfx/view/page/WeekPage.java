@@ -16,10 +16,12 @@
 
 package com.calendarfx.view.page;
 
-import com.calendarfx.view.*;
+import com.calendarfx.view.AllDayView;
+import com.calendarfx.view.DetailedWeekView;
+import com.calendarfx.view.Messages;
+import com.calendarfx.view.WeekDayView;
+import com.calendarfx.view.WeekTimeScaleView;
 import com.calendarfx.view.print.ViewType;
-import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
-import de.jensd.fx.glyphs.fontawesome.utils.FontAwesomeIconFactory;
 import impl.com.calendarfx.view.page.WeekPageSkin;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -30,8 +32,9 @@ import javafx.scene.control.Skin;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
-import javafx.scene.text.Text;
 import org.controlsfx.control.PropertySheet;
+import org.kordamp.ikonli.fontawesome.FontAwesome;
+import org.kordamp.ikonli.javafx.FontIcon;
 
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
@@ -41,8 +44,8 @@ import java.util.Optional;
  * in a row, normally a week. The view consists of the page "chrome" inherited
  * from the superclass, a {@link WeekDayView} for each day, an
  * {@link AllDayView}, and a {@link WeekTimeScaleView}.
- * <p/>
- * <center><img width="100%" src="doc-files/week-page.png"></center>
+ *
+ * <img width="100%" src="doc-files/week-page.png" alt="Week Page">
  */
 public class WeekPage extends PageBase {
 
@@ -54,16 +57,19 @@ public class WeekPage extends PageBase {
      * Constructs a new week page.
      */
     public WeekPage() {
-        getStyleClass().add("week-page"); //$NON-NLS-1$
-        setDateTimeFormatter(DateTimeFormatter.ofPattern(Messages.getString("WeekPage.DATE_FORMAT"))); //$NON-NLS-1$
+        getStyleClass().add("week-page");
+        setDateTimeFormatter(DateTimeFormatter.ofPattern(Messages.getString("WeekPage.DATE_FORMAT")));
 
+        this.toolBarControls.getStyleClass().add("toolbar-controls-box");
         this.detailedWeekView = new DetailedWeekView();
 
+        FontIcon layoutIcon = new FontIcon(FontAwesome.TABLE);
+        layoutIcon.getStyleClass().addAll("button-icon", "layout-button-icon");
+
         ToggleButton layoutButton = new ToggleButton();
-        layoutButton.setTooltip(new Tooltip(Messages.getString("WeekPage.TOOLTIP_LAYOUT"))); //$NON-NLS-1$
+        layoutButton.setMaxHeight(Double.MAX_VALUE);
+        layoutButton.setTooltip(new Tooltip(Messages.getString("WeekPage.TOOLTIP_LAYOUT")));
         layoutButton.setId("layout-button");
-        Text layoutIcon = FontAwesomeIconFactory.get().createIcon(FontAwesomeIcon.TABLE);
-        layoutIcon.getStyleClass().addAll("button-icon", "layout-button-icon"); //$NON-NLS-1$ //$NON-NLS-2$
         layoutButton.setGraphic(layoutIcon);
         layoutButton.setSelected(getLayout().equals(Layout.SWIMLANE));
         layoutButton.setOnAction(evt -> {
@@ -153,7 +159,7 @@ public class WeekPage extends PageBase {
         return ViewType.WEEK_VIEW;
     }
 
-    private final String WEEK_PAGE_CATEGORY = "Week Page"; //$NON-NLS-1$
+    private final String WEEK_PAGE_CATEGORY = "Week Page";
 
     @Override
     public ObservableList<PropertySheet.Item> getPropertySheetItems() {
@@ -183,12 +189,12 @@ public class WeekPage extends PageBase {
 
             @Override
             public String getName() {
-                return "Layout Button"; //$NON-NLS-1$
+                return "Layout Button";
             }
 
             @Override
             public String getDescription() {
-                return "Can the user access the button to toggle the layout or not."; //$NON-NLS-1$
+                return "Can the user access the button to toggle the layout or not.";
             }
 
             @Override

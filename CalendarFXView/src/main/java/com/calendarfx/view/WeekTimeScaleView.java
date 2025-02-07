@@ -16,9 +16,6 @@
 
 package com.calendarfx.view;
 
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
-
 import impl.com.calendarfx.view.WeekTimeScaleViewSkin;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -27,15 +24,16 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.MapChangeListener;
 import javafx.scene.control.Skin;
 
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
+
 /**
  * A specialization of the regular {@link TimeScaleView} to support a reference
  * to the {@link WeekView} where this scale is being used.
  */
 public class WeekTimeScaleView extends TimeScaleView {
 
-    private final ObjectProperty<DateTimeFormatter> formatter = new SimpleObjectProperty<>(
-            this, "formatter", //$NON-NLS-1$
-            DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT));
+    private final ObjectProperty<DateTimeFormatter> formatter = new SimpleObjectProperty<>(this, "formatter", DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT));
 
     /**
      * Constructs a new scale view.
@@ -43,9 +41,8 @@ public class WeekTimeScaleView extends TimeScaleView {
     public WeekTimeScaleView() {
         MapChangeListener<? super Object, ? super Object> propertiesListener = change -> {
             if (change.wasAdded()) {
-                if (change.getKey().equals("week.view")) { //$NON-NLS-1$
-                    detailedWeekView
-                            .set((DetailedWeekView) change.getValueAdded());
+                if (change.getKey().equals("week.view")) {
+                    detailedWeekView.set((DetailedWeekView) change.getValueAdded());
                 }
             }
         };
@@ -58,8 +55,7 @@ public class WeekTimeScaleView extends TimeScaleView {
         return new WeekTimeScaleViewSkin(this);
     }
 
-    private final ReadOnlyObjectWrapper<DetailedWeekView> detailedWeekView = new ReadOnlyObjectWrapper<>(
-            this, "detailedWeekView"); //$NON-NLS-1$
+    private final ReadOnlyObjectWrapper<DetailedWeekView> detailedWeekView = new ReadOnlyObjectWrapper<>(this, "detailedWeekView");
 
     /**
      * The week view where this scale is being used.
@@ -80,13 +76,12 @@ public class WeekTimeScaleView extends TimeScaleView {
     }
 
     @Override
-    protected ObjectProperty<DateTimeFormatter> dateTimeFormatterProperty() {
+    protected ObjectProperty<DateTimeFormatter> timeFormatterProperty() {
         return formatter;
     }
 
     @Override
-    public void setDateTimeFormatter(DateTimeFormatter formatter) {
-        dateTimeFormatterProperty().set(formatter);
+    public void setTimeFormatter(DateTimeFormatter formatter) {
+        timeFormatterProperty().set(formatter);
     }
-
 }

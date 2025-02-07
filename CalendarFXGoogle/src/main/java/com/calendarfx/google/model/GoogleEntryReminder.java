@@ -23,7 +23,7 @@ import javafx.beans.property.SimpleObjectProperty;
 
 /**
  * Remind method.
- * <p>
+ *
  * Created by gdiaz on 28/04/2017.
  */
 public class GoogleEntryReminder {
@@ -85,8 +85,8 @@ public class GoogleEntryReminder {
 
         POPUP("popup", "Popup"), EMAIL("email", "Email");
 
-        private String id;
-        private String name;
+        private final String id;
+        private final String name;
 
         RemindMethod(String id, String name) {
             this.id = id;

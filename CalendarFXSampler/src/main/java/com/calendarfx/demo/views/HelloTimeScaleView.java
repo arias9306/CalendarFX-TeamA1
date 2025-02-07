@@ -28,7 +28,12 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
+import java.time.LocalDateTime;
+
 public class HelloTimeScaleView extends CalendarFXSample {
+
+    public static final String STYLE_LABEL_TIME_EVEN_HOURS = "-fx-text-fill: gray;";
+    public static final String STYLE_LABEL_TIME_ODD_HOURS = "-fx-text-fill: darkblue;";
 
     @Override
     public String getSampleName() {
@@ -43,6 +48,8 @@ public class HelloTimeScaleView extends CalendarFXSample {
     @Override
     public Node getPanel(Stage stage) {
         TimeScaleView view = new TimeScaleView();
+        view.setTimeStyleProvider(this::provideTimeStyle);
+
         final DayViewScrollPane scrollPane = new DayViewScrollPane(view, new ScrollBar());
         scrollPane.setPrefHeight(2000);
         return wrap(scrollPane);
@@ -57,8 +64,7 @@ public class HelloTimeScaleView extends CalendarFXSample {
         box.setFillHeight(false);
 
         StackPane stackPane = new StackPane();
-        stackPane.setStyle(
-                "-fx-background-color: white; -fx-border-color: gray; -fx-border-width: .25px; -fx-padding: 0 20 0 20;");
+        stackPane.setStyle("-fx-background-color: white; -fx-border-color: gray; -fx-border-width: .25px; -fx-padding: 0 20 0 20;");
         box.getChildren().add(stackPane);
 
         stackPane.getChildren().add(node);
@@ -75,6 +81,10 @@ public class HelloTimeScaleView extends CalendarFXSample {
     @Override
     public String getSampleDescription() {
         return "The scale shows the time of day vertically.";
+    }
+
+    private String provideTimeStyle(LocalDateTime dateTime) {
+        return dateTime.getHour() % 2 == 0 ? STYLE_LABEL_TIME_EVEN_HOURS : STYLE_LABEL_TIME_ODD_HOURS;
     }
 
     public static void main(String[] args) {

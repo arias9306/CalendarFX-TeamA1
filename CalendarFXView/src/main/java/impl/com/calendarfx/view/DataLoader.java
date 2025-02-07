@@ -35,7 +35,7 @@ import static java.util.Objects.requireNonNull;
 
 public final class DataLoader {
 
-    private LoadDataSettingsProvider provider;
+    private final LoadDataSettingsProvider provider;
 
     public DataLoader(LoadDataSettingsProvider provider) {
         this.provider = requireNonNull(provider);
@@ -47,6 +47,7 @@ public final class DataLoader {
 
         LocalDate startDate = provider.getLoadStartDate();
         LocalDate endDate = provider.getLoadEndDate();
+
         ZoneId zoneId = provider.getZoneId();
 
         for (CalendarSource source : provider.getCalendarSources()) {

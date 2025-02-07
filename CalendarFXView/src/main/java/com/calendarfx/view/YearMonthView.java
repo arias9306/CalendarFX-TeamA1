@@ -37,7 +37,7 @@ import static java.util.Objects.requireNonNull;
 import static javafx.geometry.Pos.CENTER;
 
 /**
- * Displays a given month in a given year. The view can be configured in many
+ * Displays a given month of a given year. The view can be configured in many
  * ways:
  * <ul>
  * <li>Show / hide the name of the month</li>
@@ -56,9 +56,9 @@ import static javafx.geometry.Pos.CENTER;
  * that date)</li>
  * </ol>
  * The image below shows the visual apperance of this control:
- * <p/>
- * <center><img src="doc-files/date-picker.png"></center>
- * <p/>
+ *
+ * <img src="doc-files/date-picker.png" alt="Date Picker">
+ *
  */
 public class YearMonthView extends MonthViewBase {
 
@@ -66,8 +66,7 @@ public class YearMonthView extends MonthViewBase {
      * Constructs a new view.
      */
     public YearMonthView() {
-        getStyleClass().add("year-month-view"); //$NON-NLS-1$
-
+        getStyleClass().add("year-month-view");
         setCellFactory(view -> new DateCell());
     }
 
@@ -105,14 +104,14 @@ public class YearMonthView extends MonthViewBase {
         }
     }
 
-    private final ObjectProperty<Callback<YearMonthView, DateCell>> cellFactory = new SimpleObjectProperty<>(this, "cellFactory"); //$NON-NLS-1$
+    private final ObjectProperty<Callback<YearMonthView, DateCell>> cellFactory = new SimpleObjectProperty<>(this, "cellFactory");
 
     /**
      * A factory for creating alternative content for the month view. The image
      * below shows the {@link YearMonthView} once with the default factory and
      * once with an alternative factory that creates checkboxes.
-     * <p/>
-     * <center><img src="doc-files/month-cell-factory.png"></center>
+     *
+     * <img src="doc-files/month-cell-factory.png" alt="Month Cell Factory">
      *
      * @return the cell factory
      */
@@ -140,8 +139,7 @@ public class YearMonthView extends MonthViewBase {
         return cellFactoryProperty().get();
     }
 
-    private final BooleanProperty showMonth = new SimpleBooleanProperty(this,
-            "showMonth", true); //$NON-NLS-1$
+    private final BooleanProperty showMonth = new SimpleBooleanProperty(this, "showMonth", true);
 
     /**
      * Show or hide the name of the month.
@@ -171,8 +169,7 @@ public class YearMonthView extends MonthViewBase {
         return showMonthProperty().get();
     }
 
-    private final BooleanProperty showYear = new SimpleBooleanProperty(this,
-            "showYear", true); //$NON-NLS-1$
+    private final BooleanProperty showYear = new SimpleBooleanProperty(this, "showYear", true);
 
     /**
      * Show or hide the year.
@@ -202,8 +199,7 @@ public class YearMonthView extends MonthViewBase {
         return showYearProperty().get();
     }
 
-    private final BooleanProperty showTodayButton = new SimpleBooleanProperty(
-            this, "showTodayButton", true); //$NON-NLS-1$
+    private final BooleanProperty showTodayButton = new SimpleBooleanProperty(this, "showTodayButton", true);
 
     /**
      * Show or hide a button to quickly go to today's date.
@@ -233,8 +229,7 @@ public class YearMonthView extends MonthViewBase {
         return showTodayButtonProperty().get();
     }
 
-    private final BooleanProperty showMonthArrows = new SimpleBooleanProperty(
-            this, "showMonthArrows", true); //$NON-NLS-1$
+    private final BooleanProperty showMonthArrows = new SimpleBooleanProperty(this, "showMonthArrows", true);
 
     /**
      * Shows or hides the arrows to change the month.
@@ -264,8 +259,7 @@ public class YearMonthView extends MonthViewBase {
         return showMonthArrowsProperty().get();
     }
 
-    private final BooleanProperty showYearArrows = new SimpleBooleanProperty(
-            this, "showYearArrows", true); //$NON-NLS-1$
+    private final BooleanProperty showYearArrows = new SimpleBooleanProperty(this, "showYearArrows", true);
 
     /**
      * Shows or hides the arrows to change the year.
@@ -295,14 +289,13 @@ public class YearMonthView extends MonthViewBase {
         return showYearArrowsProperty().get();
     }
 
-    private final BooleanProperty showUsageColors = new SimpleBooleanProperty(
-            this, "showUsageColors", false); //$NON-NLS-1$
+    private final BooleanProperty showUsageColors = new SimpleBooleanProperty(this, "showUsageColors", false);
 
     /**
      * Show or hide usage colors that are based on the number of entries on a
      * given date. The image below shows those colors in action:
-     * <p/>
-     * <center><img src="doc-files/usage-colors.png"></center>
+     *
+     * <img src="doc-files/usage-colors.png" alt="Usage Colors">
      *
      * @return true if the usage colors will be shown
      */
@@ -354,7 +347,7 @@ public class YearMonthView extends MonthViewBase {
         NONE
     }
 
-    private final ObjectProperty<ClickBehaviour> clickBehaviour = new SimpleObjectProperty<>(this, "clickBehaviour", PERFORM_SELECTION); //$NON-NLS-1$
+    private final ObjectProperty<ClickBehaviour> clickBehaviour = new SimpleObjectProperty<>(this, "clickBehaviour", PERFORM_SELECTION);
 
     /**
      * The behaviour used when the user clicks on a date.
@@ -384,7 +377,7 @@ public class YearMonthView extends MonthViewBase {
         return clickBehaviourProperty().get();
     }
 
-    private static final String MONTH_VIEW_CATEGORY = "Month View"; //$NON-NLS-1$
+    private static final String MONTH_VIEW_CATEGORY = "Month View";
 
     @Override
     public ObservableList<Item> getPropertySheetItems() {
@@ -413,12 +406,12 @@ public class YearMonthView extends MonthViewBase {
 
             @Override
             public String getName() {
-                return "Click Behaviour"; //$NON-NLS-1$
+                return "Click Behaviour";
             }
 
             @Override
             public String getDescription() {
-                return "Click behaviour"; //$NON-NLS-1$
+                return "Click behaviour";
             }
 
             @Override
@@ -451,12 +444,12 @@ public class YearMonthView extends MonthViewBase {
 
             @Override
             public String getName() {
-                return "Show Month"; //$NON-NLS-1$
+                return "Show Month";
             }
 
             @Override
             public String getDescription() {
-                return "Show or hide the name of the month"; //$NON-NLS-1$
+                return "Show or hide the name of the month";
             }
 
             @Override
@@ -489,12 +482,12 @@ public class YearMonthView extends MonthViewBase {
 
             @Override
             public String getName() {
-                return "Show Today Button"; //$NON-NLS-1$
+                return "Show Today Button";
             }
 
             @Override
             public String getDescription() {
-                return "Show or hide the 'today' button"; //$NON-NLS-1$
+                return "Show or hide the 'today' button";
             }
 
             @Override
@@ -527,12 +520,12 @@ public class YearMonthView extends MonthViewBase {
 
             @Override
             public String getName() {
-                return "Show Usage Colors"; //$NON-NLS-1$
+                return "Show Usage Colors";
             }
 
             @Override
             public String getDescription() {
-                return "Show Usage Colors"; //$NON-NLS-1$
+                return "Show Usage Colors";
             }
 
             @Override
@@ -565,12 +558,12 @@ public class YearMonthView extends MonthViewBase {
 
             @Override
             public String getName() {
-                return "Show Year"; //$NON-NLS-1$
+                return "Show Year";
             }
 
             @Override
             public String getDescription() {
-                return "Show or hide the year"; //$NON-NLS-1$
+                return "Show or hide the year";
             }
 
             @Override
@@ -603,12 +596,12 @@ public class YearMonthView extends MonthViewBase {
 
             @Override
             public String getName() {
-                return "Show Year Arrows"; //$NON-NLS-1$
+                return "Show Year Arrows";
             }
 
             @Override
             public String getDescription() {
-                return "Show or hide the year adjuster arrows"; //$NON-NLS-1$
+                return "Show or hide the year adjuster arrows";
             }
 
             @Override
@@ -641,12 +634,12 @@ public class YearMonthView extends MonthViewBase {
 
             @Override
             public String getName() {
-                return "Show Month Arrows"; //$NON-NLS-1$
+                return "Show Month Arrows";
             }
 
             @Override
             public String getDescription() {
-                return "Show or hide the month adjustment arrows"; //$NON-NLS-1$
+                return "Show or hide the month adjustment arrows";
             }
 
             @Override

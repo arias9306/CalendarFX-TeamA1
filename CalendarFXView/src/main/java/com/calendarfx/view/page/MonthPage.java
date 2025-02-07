@@ -28,12 +28,12 @@ import java.time.format.DateTimeFormatter;
  * A composite view focused on displaying calendar information for a single
  * month. The view consists of the page "chrome" inherited from the superclass
  * and a {@link MonthView}.
- * <p/>
- * <center><img width="100%" src="doc-files/month-page.png"></center>
+ *
+ * <img width="100%" src="doc-files/month-page.png" alt="Month Page">
  */
 public class MonthPage extends PageBase {
 
-    private MonthView monthView;
+    private final MonthView monthView;
 
     /**
      * Constructs a new month page.
@@ -41,11 +41,11 @@ public class MonthPage extends PageBase {
     public MonthPage() {
         super();
 
-        getStyleClass().add("month-page"); //$NON-NLS-1$
+        getStyleClass().add("month-page");
 
         this.monthView = new MonthView();
 
-        setDateTimeFormatter(DateTimeFormatter.ofPattern(Messages.getString("MonthPage.DATE_FORMAT"))); //$NON-NLS-1$
+        setDateTimeFormatter(DateTimeFormatter.ofPattern(Messages.getString("MonthPage.DATE_FORMAT")));
     }
 
     @Override

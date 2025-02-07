@@ -17,6 +17,7 @@
 package impl.com.calendarfx.view;
 
 import com.calendarfx.view.TimeField;
+import javafx.beans.InvalidationListener;
 import javafx.event.EventHandler;
 import javafx.scene.control.Label;
 import javafx.scene.control.SkinBase;
@@ -31,13 +32,13 @@ import java.time.LocalTime;
 @SuppressWarnings("javadoc")
 public class TimeFieldSkin extends SkinBase<TimeField> {
 
-    private NumericTextField hourField;
-    private NumericTextField minuteField;
+    private final NumericTextField hourField;
+    private final NumericTextField minuteField;
 
     public TimeFieldSkin(TimeField field) {
         super(field);
 
-        StringConverter<String> valueConverter = new StringConverter<String>() {
+        StringConverter<String> valueConverter = new StringConverter<>() {
 
             @Override
             public String fromString(String text) {
@@ -56,10 +57,8 @@ public class TimeFieldSkin extends SkinBase<TimeField> {
             }
         };
 
-        TextFormatter<String> hourFormatter = new TextFormatter<>(
-                valueConverter, "0");
-        TextFormatter<String> minuteFormatter = new TextFormatter<>(
-                valueConverter, "0");
+        TextFormatter<String> hourFormatter = new TextFormatter<>(valueConverter, "0");
+        TextFormatter<String> minuteFormatter = new TextFormatter<>(valueConverter, "0");
 
         hourField = new NumericTextField(23);
         hourField.setOnKeyPressed(new RollingHandler(hourField, 23));
@@ -69,17 +68,18 @@ public class TimeFieldSkin extends SkinBase<TimeField> {
         minuteField.setOnKeyPressed(new RollingHandler(minuteField, 59));
         minuteField.setTextFormatter(minuteFormatter);
 
-        Label separator = new Label(":"); //$NON-NLS-1$
+        Label separator = new Label(":");
         separator.setMaxHeight(Double.MAX_VALUE);
 
         HBox box = new HBox();
+        box.getStyleClass().add("box");
         box.setFillHeight(true);
         box.getChildren().addAll(hourField, separator, minuteField);
 
         getChildren().add(box);
 
         field.valueProperty().addListener(it -> {
-            if (!updatingFields) {
+            if (!updatingValue) {
                 updateFields();
             }
         });
@@ -88,62 +88,77 @@ public class TimeFieldSkin extends SkinBase<TimeField> {
 
         // Install the listener after setting the values, avoid unnecessary
         // notifications
-        hourField.textProperty().addListener(it -> updateValue());
-        minuteField.textProperty().addListener(it -> updateValue());
+        InvalidationListener updateValueListener = it -> {
+            if (!updatingTextFields) {
+                updateValue();
+            }
+        };
+
+        hourField.textProperty().addListener(updateValueListener);
+        minuteField.textProperty().addListener(updateValueListener);
     }
 
-    private boolean updatingFields;
+    private boolean updatingTextFields;
 
     private void updateFields() {
-        updatingFields = true;
+        updatingTextFields = true;
 
-        TimeField timeField = getSkinnable();
-        LocalTime localTime = timeField.getValue();
-        if (localTime != null) {
-            hourField.setText(Integer.toString(localTime.getHour()));
-            minuteField.setText(Integer.toString(localTime.getMinute()));
-        } else {
-            hourField.setText("");
-            minuteField.setText("");
+        try {
+            TimeField timeField = getSkinnable();
+            LocalTime localTime = timeField.getValue();
+            if (localTime != null) {
+                hourField.setText(Integer.toString(localTime.getHour()));
+                minuteField.setText(Integer.toString(localTime.getMinute()));
+            } else {
+                hourField.setText("");
+                minuteField.setText("");
+            }
+        } finally {
+            updatingTextFields = false;
         }
-
-        updatingFields = false;
     }
 
+    private boolean updatingValue;
+
     private void updateValue() {
-        int hour = 0;
-        int minute = 0;
+        updatingValue = true;
         try {
-            hour = Math.max(0, Math.min(23, Integer.parseInt(hourField.getText())));
-            minute = Math.max(0, Math.min(59, Integer.parseInt(minuteField.getText())));
-        } catch (NumberFormatException ex) {
-            // do nothing
-        }
-
-        /*
-         * LocalTime is immutable, hence we have to create new instances over
-         * and over again, which causes property change events. So we have to
-         * have this check here to ensure that the value has really changed. And
-         * we only care about hours and minutes, so we are not using
-         * LocalTime.equals().
-         */
-        LocalTime oldTime = getSkinnable().getValue();
-        LocalTime newTime = LocalTime.of(hour, minute);
-
-        if (oldTime != null && newTime != null) {
-            if (!(oldTime.getHour() == newTime.getHour() && oldTime.getMinute() == newTime.getMinute())) {
-                getSkinnable().setValue(newTime);
+            int hour = 0;
+            int minute = 0;
+            try {
+                hour = Math.max(0, Math.min(23, Integer.parseInt(hourField.getText())));
+                minute = Math.max(0, Math.min(59, Integer.parseInt(minuteField.getText())));
+            } catch (NumberFormatException ex) {
+                // do nothing
             }
-        } else if (newTime == null) {
-            getSkinnable().setValue(null);
 
+            /*
+             * LocalTime is immutable, hence we have to create new instances over
+             * and over again, which causes property change events. So we have to
+             * have this check here to ensure that the value has really changed. And
+             * we only care about hours and minutes, so we are not using
+             * LocalTime.equals().
+             */
+            LocalTime oldTime = getSkinnable().getValue();
+            LocalTime newTime = LocalTime.of(hour, minute);
+
+            if (oldTime != null && newTime != null) {
+                if (!(oldTime.getHour() == newTime.getHour() && oldTime.getMinute() == newTime.getMinute())) {
+                    getSkinnable().setValue(newTime);
+                }
+            } else if (newTime == null) {
+                getSkinnable().setValue(null);
+
+            }
+        } finally {
+            updatingValue = false;
         }
     }
 
     public class RollingHandler implements EventHandler<KeyEvent> {
 
-        private int max;
-        private TextField field;
+        private final int max;
+        private final TextField field;
 
         public RollingHandler(TextField field, int max) {
             this.field = field;
@@ -165,7 +180,7 @@ public class TimeFieldSkin extends SkinBase<TimeField> {
         }
 
         private void increment() {
-            Integer value = 0;
+            int value = 0;
             try {
                 value = Integer.parseInt(field.getText());
             } catch (NumberFormatException ex) {
@@ -177,14 +192,14 @@ public class TimeFieldSkin extends SkinBase<TimeField> {
                 value = 0;
             }
             if (value < 10) {
-                field.setText("0" + Integer.toString(value));
+                field.setText("0" + value);
             } else {
                 field.setText(Integer.toString(value));
             }
         }
 
         private void decrement() {
-            Integer value = 0;
+            int value = 0;
             try {
                 value = Integer.parseInt(field.getText());
             } catch (NumberFormatException ex) {
@@ -197,7 +212,7 @@ public class TimeFieldSkin extends SkinBase<TimeField> {
             }
 
             if (value < 10) {
-                field.setText("0" + Integer.toString(value));
+                field.setText("0" + value);
             } else {
                 field.setText(Integer.toString(value));
             }
@@ -217,12 +232,12 @@ public class TimeFieldSkin extends SkinBase<TimeField> {
 
         @Override
         public void replaceText(int start, int end, String s) {
-            super.replaceText(start, end, s.replaceAll("[^0-9]", "")); //$NON-NLS-1$ //$NON-NLS-2$
+            super.replaceText(start, end, s.replaceAll("[^0-9]", ""));
         }
 
         @Override
         public void replaceSelection(String s) {
-            super.replaceSelection(s.replaceAll("[^0-9]", "")); //$NON-NLS-1$ //$NON-NLS-2$
+            super.replaceSelection(s.replaceAll("[^0-9]", ""));
         }
     }
 }

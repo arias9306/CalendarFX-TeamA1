@@ -29,7 +29,7 @@ import javafx.scene.layout.VBox;
 @SuppressWarnings("javadoc")
 public class SourceViewSkin extends SkinBase<SourceView> {
 
-    private VBox vbox;
+    private final VBox vbox;
 
     private final InvalidationListener updater = obs -> updateView();
 
@@ -37,7 +37,7 @@ public class SourceViewSkin extends SkinBase<SourceView> {
         super(view);
 
         vbox = new VBox();
-        vbox.getStyleClass().add("container"); //$NON-NLS-1$
+        vbox.getStyleClass().add("container");
 
         getChildren().add(vbox);
 
@@ -57,8 +57,8 @@ public class SourceViewSkin extends SkinBase<SourceView> {
             for (Calendar calendar : source.getCalendars()) {
                 CheckBox checkBox = new CheckBox();
                 checkBox.textProperty().bind(calendar.nameProperty());
-                checkBox.getStyleClass().addAll("default-style-visibility-checkbox",//$NON-NLS-1$
-                        calendar.getStyle() + "-visibility-checkbox"); //$NON-NLS-1$
+                checkBox.getStyleClass().addAll("default-style-visibility-checkbox",
+                        calendar.getStyle() + "-visibility-checkbox");
                 Bindings.bindBidirectional(checkBox.selectedProperty(), getSkinnable().getCalendarVisibilityProperty(calendar));
                 box.getChildren().add(checkBox);
             }

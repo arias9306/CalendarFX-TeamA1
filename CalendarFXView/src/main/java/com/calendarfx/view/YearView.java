@@ -36,13 +36,13 @@ import java.util.Map;
  * @see DateControl#setUsagePolicy(Callback)
  *
  * <h3>Screenshot</h3>
- * <center><img src="doc-files/year-view.png"></center>
+ * <img src="doc-files/year-view.png" alt="Year View">
  */
 public class YearView extends DateControl {
 
     private static final String DEFAULT_STYLE_CLASS = "year-view";
 
-    private Map<Month, YearMonthView> viewMap = new HashMap<>();
+    private final Map<Month, YearMonthView> viewMap = new HashMap<>();
 
     /**
      * Constructs a new year view.
@@ -64,7 +64,7 @@ public class YearView extends DateControl {
         return new YearViewSkin(this);
     }
 
-    private final ReadOnlyObjectWrapper<Year> year = new ReadOnlyObjectWrapper<>(this, "year", Year.from(getToday())); //$NON-NLS-1$
+    private final ReadOnlyObjectWrapper<Year> year = new ReadOnlyObjectWrapper<>(this, "year", Year.from(getToday()));
 
     /**
      * Reports the year shown by the control.

@@ -32,6 +32,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.event.WeakEventHandler;
 import javafx.geometry.Side;
 import javafx.scene.control.Button;
 import javafx.scene.control.DatePicker;
@@ -59,17 +60,18 @@ import static java.util.Objects.requireNonNull;
  */
 public class DeveloperConsoleSkin extends SkinBase<DeveloperConsole> {
 
-    private TableView<LogEntry> tableView;
-    private FilteredList<LogEntry> filteredList;
-    private ToggleButton showLoadEvents;
-    private ToggleButton showCalendarEvents;
-    private ToggleButton showRequestEvents;
-    private DatePicker datePicker;
-    private DatePicker todayPicker;
-    private TimeField timeField;
+    private final TableView<LogEntry> tableView;
+    private final FilteredList<LogEntry> filteredList;
+    private final ToggleButton showLoadEvents;
+    private final ToggleButton showCalendarEvents;
+    private final ToggleButton showRequestEvents;
+    private final DatePicker datePicker;
+    private final DatePicker todayPicker;
+    private final TimeField timeField;
 
-    private ObservableList<LogEntry> masterData = FXCollections.observableArrayList();
-    private EventHandler<CalendarEvent> calendarListener = evt -> addEvent(evt, LogEntryType.CALENDAR_EVENT);
+    private final ObservableList<LogEntry> masterData = FXCollections.observableArrayList();
+    private final EventHandler<CalendarEvent> calendarListener = evt -> addEvent(evt, LogEntryType.CALENDAR_EVENT);
+    private final WeakEventHandler<CalendarEvent> weakCalendarListener = new WeakEventHandler<>(calendarListener);
 
     public DeveloperConsoleSkin(DeveloperConsole view) {
         super(view);
@@ -87,24 +89,24 @@ public class DeveloperConsoleSkin extends SkinBase<DeveloperConsole> {
         this.todayPicker = new DatePicker();
         this.timeField = new TimeField();
 
-        showCalendarEvents = new ToggleButton("Calendar Events"); //$NON-NLS-1$
+        showCalendarEvents = new ToggleButton("Calendar Events");
         showCalendarEvents.setSelected(true);
         showCalendarEvents.setOnAction(evt -> filter());
         toolbar.getItems().add(showCalendarEvents);
 
-        showLoadEvents = new ToggleButton("Load Events"); //$NON-NLS-1$
+        showLoadEvents = new ToggleButton("Load Events");
         showLoadEvents.setSelected(false);
         showLoadEvents.setOnAction(evt -> filter());
         toolbar.getItems().add(showLoadEvents);
 
-        showRequestEvents = new ToggleButton("Request Events"); //$NON-NLS-1$
+        showRequestEvents = new ToggleButton("Request Events");
         showRequestEvents.setSelected(false);
         showRequestEvents.setOnAction(evt -> filter());
         toolbar.getItems().add(showRequestEvents);
 
         toolbar.getItems().add(new Separator());
 
-        Button clearLog = new Button("Clear"); //$NON-NLS-1$
+        Button clearLog = new Button("Clear");
         clearLog.setOnAction(evt -> {
             masterData.clear();
             LogEntry.counter = 0;
@@ -114,83 +116,83 @@ public class DeveloperConsoleSkin extends SkinBase<DeveloperConsole> {
 
         toolbar.getItems().add(new Separator());
 
-        toolbar.getItems().add(new Label("Date:")); //$NON-NLS-1$
+        toolbar.getItems().add(new Label("Date:"));
         toolbar.getItems().add(datePicker);
 
-        toolbar.getItems().add(new Label("Today:")); //$NON-NLS-1$
+        toolbar.getItems().add(new Label("Today:"));
         toolbar.getItems().add(todayPicker);
 
-        toolbar.getItems().add(new Label("Time:")); //$NON-NLS-1$
+        toolbar.getItems().add(new Label("Time:"));
         toolbar.getItems().add(timeField);
 
         BorderPane eventsBorderPane = new BorderPane();
         eventsBorderPane.setBottom(toolbar);
         eventsBorderPane.setCenter(tableView);
 
-        Tab tab = new Tab("Events", eventsBorderPane); //$NON-NLS-1$
+        Tab tab = new Tab("Events", eventsBorderPane);
         tabPane.getTabs().add(tab);
 
-        TableColumn<LogEntry, Integer> counterColumn = new TableColumn<>("#"); //$NON-NLS-1$
+        TableColumn<LogEntry, Integer> counterColumn = new TableColumn<>("#");
         counterColumn
-                .setCellValueFactory(new PropertyValueFactory<>("counter")); //$NON-NLS-1$
+                .setCellValueFactory(new PropertyValueFactory<>("counter"));
         counterColumn.setPrefWidth(50);
 
         TableColumn<LogEntry, LogEntryType> logEntryTypeColumn = new TableColumn<>(
-                "Event"); //$NON-NLS-1$
+                "Event");
         logEntryTypeColumn.setCellValueFactory(
-                new PropertyValueFactory<>("logEntryType")); //$NON-NLS-1$
+                new PropertyValueFactory<>("logEntryType"));
         logEntryTypeColumn.setPrefWidth(200);
 
         TableColumn<LogEntry, String> eventTypeColumn = new TableColumn<>(
-                "Event Type"); //$NON-NLS-1$
+                "Event Type");
         eventTypeColumn
-                .setCellValueFactory(new PropertyValueFactory<>("eventType")); //$NON-NLS-1$
+                .setCellValueFactory(new PropertyValueFactory<>("eventType"));
         eventTypeColumn.setPrefWidth(200);
 
         TableColumn<LogEntry, String> sourceColumn = new TableColumn<>(
-                "Source"); //$NON-NLS-1$
-        sourceColumn.setCellValueFactory(new PropertyValueFactory<>("source")); //$NON-NLS-1$
+                "Source");
+        sourceColumn.setCellValueFactory(new PropertyValueFactory<>("source"));
         sourceColumn.setPrefWidth(120);
 
         TableColumn<LogEntry, String> targetColumn = new TableColumn<>(
-                "Target"); //$NON-NLS-1$
-        targetColumn.setCellValueFactory(new PropertyValueFactory<>("target")); //$NON-NLS-1$
+                "Target");
+        targetColumn.setCellValueFactory(new PropertyValueFactory<>("target"));
         targetColumn.setPrefWidth(120);
 
         TableColumn<LogEntry, LocalDateTime> newStartTimeColumn = new TableColumn<>(
-                "Start"); //$NON-NLS-1$
+                "Start");
         newStartTimeColumn.setCellValueFactory(
-                new PropertyValueFactory<>("newStartTime")); //$NON-NLS-1$
+                new PropertyValueFactory<>("newStartTime"));
         newStartTimeColumn.setPrefWidth(120);
 
         TableColumn<LogEntry, LocalDateTime> newEndTimeColumn = new TableColumn<>(
-                "End"); //$NON-NLS-1$
+                "End");
         newEndTimeColumn
-                .setCellValueFactory(new PropertyValueFactory<>("newEndTime")); //$NON-NLS-1$
+                .setCellValueFactory(new PropertyValueFactory<>("newEndTime"));
         newEndTimeColumn.setPrefWidth(120);
 
         TableColumn<LogEntry, LocalDateTime> oldStartTimeColumn = new TableColumn<>(
-                "Old Start"); //$NON-NLS-1$
+                "Old Start");
         oldStartTimeColumn.setCellValueFactory(
-                new PropertyValueFactory<>("oldStartTime")); //$NON-NLS-1$
+                new PropertyValueFactory<>("oldStartTime"));
         oldStartTimeColumn.setPrefWidth(120);
 
         TableColumn<LogEntry, LocalDateTime> oldEndTimeColumn = new TableColumn<>(
-                "Old End"); //$NON-NLS-1$
+                "Old End");
         oldEndTimeColumn
-                .setCellValueFactory(new PropertyValueFactory<>("oldEndTime")); //$NON-NLS-1$
+                .setCellValueFactory(new PropertyValueFactory<>("oldEndTime"));
         oldEndTimeColumn.setPrefWidth(120);
 
         TableColumn<LogEntry, String> timestampColumn = new TableColumn<>(
-                "Timestamp"); //$NON-NLS-1$
+                "Timestamp");
         timestampColumn
-                .setCellValueFactory(new PropertyValueFactory<>("timestamp")); //$NON-NLS-1$
+                .setCellValueFactory(new PropertyValueFactory<>("timestamp"));
         timestampColumn.setPrefWidth(120);
 
         TableColumn<LogEntry, String> descriptionColumn = new TableColumn<>(
-                "Description"); //$NON-NLS-1$
+                "Description");
         descriptionColumn
-                .setCellValueFactory(new PropertyValueFactory<>("description")); //$NON-NLS-1$
+                .setCellValueFactory(new PropertyValueFactory<>("description"));
         descriptionColumn.setPrefWidth(700);
 
         tableView.getColumns().setAll(counterColumn, logEntryTypeColumn,
@@ -225,26 +227,24 @@ public class DeveloperConsoleSkin extends SkinBase<DeveloperConsole> {
     private void setDateControl(DateControl control) {
         requireNonNull(control);
 
-        control.addEventFilter(RequestEvent.REQUEST,
-                evt -> addEvent(evt, LogEntryType.REQUEST_EVENT));
-        control.addEventFilter(LoadEvent.LOAD,
-                evt -> addEvent(evt, LogEntryType.LOAD_EVENT));
+        control.addEventFilter(RequestEvent.REQUEST, evt -> addEvent(evt, LogEntryType.REQUEST_EVENT));
+        control.addEventFilter(LoadEvent.LOAD, evt -> addEvent(evt, LogEntryType.LOAD_EVENT));
 
         // listen to calendars
 
         for (Calendar calendar : control.getCalendars()) {
-            calendar.addEventHandler(calendarListener);
+            calendar.addEventHandler(weakCalendarListener);
         }
 
         ListChangeListener<? super Calendar> l = change -> {
             while (change.next()) {
                 if (change.wasAdded()) {
                     for (Calendar c : change.getAddedSubList()) {
-                        c.addEventHandler(calendarListener);
+                        c.addEventHandler(weakCalendarListener);
                     }
                 } else if (change.wasRemoved()) {
                     for (Calendar c : change.getRemoved()) {
-                        c.removeEventHandler(calendarListener);
+                        c.removeEventHandler(weakCalendarListener);
                     }
                 }
             }
@@ -252,12 +252,9 @@ public class DeveloperConsoleSkin extends SkinBase<DeveloperConsole> {
 
         control.getCalendars().addListener(l);
 
-        Bindings.bindBidirectional(datePicker.valueProperty(),
-                control.dateProperty());
-        Bindings.bindBidirectional(todayPicker.valueProperty(),
-                control.todayProperty());
-        Bindings.bindBidirectional(timeField.valueProperty(),
-                control.timeProperty());
+        Bindings.bindBidirectional(datePicker.valueProperty(), control.dateProperty());
+        Bindings.bindBidirectional(todayPicker.valueProperty(), control.todayProperty());
+        Bindings.bindBidirectional(timeField.valueProperty(), control.timeProperty());
         timeField.setDisable(false);
     }
 
@@ -266,12 +263,11 @@ public class DeveloperConsoleSkin extends SkinBase<DeveloperConsole> {
             switch (item.getLogEntryType()) {
                 case CALENDAR_EVENT:
                     return showCalendarEvents.isSelected();
-                case INFO:
-                    return true;
                 case LOAD_EVENT:
                     return showLoadEvents.isSelected();
                 case REQUEST_EVENT:
                     return showRequestEvents.isSelected();
+                case INFO:
                 default:
                     return true;
             }
@@ -299,13 +295,13 @@ public class DeveloperConsoleSkin extends SkinBase<DeveloperConsole> {
 
         private static int counter = 0;
 
-        private LocalDateTime timestamp = LocalDateTime.now();
+        private final LocalDateTime timestamp = LocalDateTime.now();
 
-        private LogEntryType logEntryType;
+        private final LogEntryType logEntryType;
 
-        private Event event;
+        private final Event event;
 
-        private int count;
+        private final int count;
 
         public LogEntry(LogEntryType type, Event event) {
             this.logEntryType = type;

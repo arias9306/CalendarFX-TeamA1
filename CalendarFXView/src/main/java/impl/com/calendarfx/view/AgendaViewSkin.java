@@ -16,6 +16,24 @@
 
 package impl.com.calendarfx.view;
 
+import com.calendarfx.model.Calendar;
+import com.calendarfx.model.CalendarEvent;
+import com.calendarfx.model.CalendarSource;
+import com.calendarfx.model.Entry;
+import com.calendarfx.util.LoggingDomain;
+import com.calendarfx.view.AgendaView;
+import com.calendarfx.view.AgendaView.AgendaEntry;
+import com.calendarfx.view.Messages;
+import impl.com.calendarfx.view.util.Util;
+import javafx.beans.InvalidationListener;
+import javafx.beans.WeakInvalidationListener;
+import javafx.beans.value.ChangeListener;
+import javafx.collections.ListChangeListener;
+import javafx.scene.control.Control;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.layout.BorderPane;
+
 import java.text.MessageFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -26,34 +44,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 
-import com.calendarfx.model.Calendar;
-import com.calendarfx.model.CalendarEvent;
-import com.calendarfx.model.CalendarSource;
-import com.calendarfx.model.Entry;
-import com.calendarfx.util.LoggingDomain;
-import com.calendarfx.view.AgendaView;
-import com.calendarfx.view.AgendaView.AgendaEntry;
-import com.calendarfx.view.Messages;
+public class AgendaViewSkin extends DateControlSkin<AgendaView> implements LoadDataSettingsProvider {
 
-import impl.com.calendarfx.view.util.Util;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
-import javafx.beans.WeakInvalidationListener;
-import javafx.scene.control.Control;
-import javafx.scene.control.Label;
-import javafx.scene.control.ListView;
-import javafx.scene.layout.BorderPane;
+    private static final String AGENDA_VIEW_PLACEHOLDER_LABEL = "placeholder-label";
 
-public class AgendaViewSkin extends DateControlSkin<AgendaView>
-        implements LoadDataSettingsProvider {
+    private final ListView<AgendaEntry> listView;
 
-    private static final String AGENDA_VIEW_PLACEHOLDER_LABEL = "placeholder-label"; //$NON-NLS-1$
+    private final DataLoader dataLoader = new DataLoader(this);
 
-    private ListView<AgendaEntry> listView;
-
-    private DataLoader dataLoader = new DataLoader(this);
-
-    private Label statusLabel;
+    private final Label statusLabel;
 
     public AgendaViewSkin(AgendaView view) {
         super(view);
@@ -65,50 +64,46 @@ public class AgendaViewSkin extends DateControlSkin<AgendaView>
         listView.getStyleClass().add("agenda-view-list");
 
         statusLabel = new Label();
-        statusLabel.getStyleClass().add("status-label"); //$NON-NLS-1$
+        statusLabel.getStyleClass().add("status-label");
         statusLabel.setMaxWidth(Double.MAX_VALUE);
         statusLabel.visibleProperty().bind(view.showStatusLabelProperty());
         statusLabel.managedProperty().bind(statusLabel.visibleProperty());
 
-        Label placeholderLabel = new Label(
-                Messages.getString("AgendaViewSkin.NO_ENTRIES")); //$NON-NLS-1$
+        Label placeholderLabel = new Label(Messages.getString("AgendaViewSkin.NO_ENTRIES"));
         placeholderLabel.getStyleClass().add(AGENDA_VIEW_PLACEHOLDER_LABEL);
         listView.setPlaceholder(placeholderLabel);
 
         BorderPane borderPane = new BorderPane();
-        borderPane.getStyleClass().add("container"); //$NON-NLS-1$
+        borderPane.getStyleClass().add("container");
         getChildren().add(borderPane);
 
         borderPane.setCenter(listView);
         borderPane.setTop(statusLabel);
 
-        InvalidationListener reloadListener = it -> updateList(
-                "a view property has changed, property = " + it.toString());
+        ChangeListener reloadListener = (obs, oldValue, newValue) -> updateList("a view property has changed, property = " + obs.toString());
         view.lookAheadPeriodInDaysProperty().addListener(reloadListener);
         view.lookBackPeriodInDaysProperty().addListener(reloadListener);
         view.enableHyperlinksProperty().addListener(reloadListener);
-        view.getCalendars().addListener(reloadListener);
+        view.dateProperty().addListener(reloadListener);
+
+        ListChangeListener<? super Calendar> calendarListListener = change -> {
+            updateList("the calendar list has changed");
+            listenToCalendars();
+        };
+
+        view.getCalendars().addListener(calendarListListener);
 
         updateList("initial loading");
-
         listenToCalendars();
-
-        view.getCalendars()
-                .addListener((Observable observable) -> listenToCalendars());
-
-        view.dateProperty().addListener(reloadListener);
     }
 
-    private InvalidationListener calendarVisibilityChanged = it -> updateList(
-            "calendar visibility changed");
+    private final InvalidationListener calendarVisibilityChanged = it -> updateList("calendar visibility changed");
 
-    private WeakInvalidationListener weakCalendarVisibilityChanged = new WeakInvalidationListener(
-            calendarVisibilityChanged);
+    private final WeakInvalidationListener weakCalendarVisibilityChanged = new WeakInvalidationListener(calendarVisibilityChanged);
 
     private void listenToCalendars() {
         for (Calendar c : getSkinnable().getCalendars()) {
-            getSkinnable().getCalendarVisibilityProperty(c)
-                    .addListener(weakCalendarVisibilityChanged);
+            getSkinnable().getCalendarVisibilityProperty(c).addListener(weakCalendarVisibilityChanged);
         }
     }
 
@@ -124,14 +119,17 @@ public class AgendaViewSkin extends DateControlSkin<AgendaView>
 
     @Override
     protected void entryRecurrenceRuleChanged(CalendarEvent evt) {
-        updateList(evt,
-                "entry recurrence rule changed, entry = " + evt.getEntry());
+        updateList(evt, "entry recurrence rule changed, entry = " + evt.getEntry());
     }
 
     @Override
     protected void entryFullDayChanged(CalendarEvent evt) {
-        updateList(evt,
-                "entry full day changed changed, entry = " + evt.getEntry());
+        updateList(evt, "entry full day changed changed, entry = " + evt.getEntry());
+    }
+
+    @Override
+    protected void entryTitleChanged(CalendarEvent evt) {
+        updateList(evt, "entry title changed changed, entry = " + evt.getEntry());
     }
 
     @Override
@@ -155,54 +153,52 @@ public class AgendaViewSkin extends DateControlSkin<AgendaView>
 
     private void updateList(String reason) {
         if (LoggingDomain.VIEW.isLoggable(Level.FINE)) {
-            LoggingDomain.VIEW.fine(
-                    "updating list inside agenda view, reason = " + reason);
+            LoggingDomain.VIEW.fine("updating list inside agenda view, reason = " + reason);
         }
 
         Map<LocalDate, List<Entry<?>>> dataMap = new HashMap<>();
         dataLoader.loadEntries(dataMap);
+
         List<AgendaEntry> listEntries = new ArrayList<>();
         for (LocalDate date : dataMap.keySet()) {
             AgendaEntry listViewEntry = new AgendaEntry(date);
             for (Entry<?> entry : dataMap.get(date)) {
-                listViewEntry.getEntries().add(entry);
+                if (!entry.isHidden()) {
+                    listViewEntry.getEntries().add(entry);
+                }
             }
-            listEntries.add(listViewEntry);
+            if (!listViewEntry.getEntries().isEmpty()) {
+                listEntries.add(listViewEntry);
+            }
         }
 
         Collections.sort(listEntries);
         listView.getItems().setAll(listEntries);
 
-        String startTime = getSkinnable().getDateTimeFormatter()
-                .format(getLoadStartDate());
-        String endTime = getSkinnable().getDateTimeFormatter()
-                .format(getLoadEndDate());
+        String startTime = getSkinnable().getDateTimeFormatter().format(getLoadStartDate());
+        String endTime = getSkinnable().getDateTimeFormatter().format(getLoadEndDate());
 
-        statusLabel.setText(MessageFormat.format(
-                Messages.getString("AgendaViewSkin.AGENDA_TIME_RANGE"), //$NON-NLS-1$
-                startTime, endTime));
+        statusLabel.setText(MessageFormat.format(Messages.getString("AgendaViewSkin.AGENDA_TIME_RANGE"), startTime, endTime));
     }
 
     @Override
     public String getLoaderName() {
-        return "Agenda View"; //$NON-NLS-1$
+        return "Agenda View";
     }
 
     @Override
     public LocalDate getLoadStartDate() {
-        return getSkinnable().getDate()
-                .minusDays(getSkinnable().getLookBackPeriodInDays());
+        return getSkinnable().getDate().minusDays(getSkinnable().getLookBackPeriodInDays());
     }
 
     @Override
     public LocalDate getLoadEndDate() {
-        return getSkinnable().getDate()
-                .plusDays(getSkinnable().getLookAheadPeriodInDays());
+        return getSkinnable().getDate().plusDays(getSkinnable().getLookAheadPeriodInDays());
     }
 
     @Override
     public ZoneId getZoneId() {
-        return ZoneId.systemDefault();
+        return getSkinnable().getZoneId();
     }
 
     @Override

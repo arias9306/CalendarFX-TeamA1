@@ -36,7 +36,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 
-import static impl.com.calendarfx.view.ViewHelper.scrollToRequestedTime;
+import static com.calendarfx.util.ViewHelper.scrollToRequestedTime;
 
 public class DetailedWeekViewSkin extends DateControlSkin<DetailedWeekView> {
 
@@ -63,9 +63,9 @@ public class DetailedWeekViewSkin extends DateControlSkin<DetailedWeekView> {
         weekViewScrollPane = new DayViewScrollPane(weekView, scrollBar);
         weekViewScrollPane.getStyleClass().add("week-view-scroll-pane");
 
-        allDayLabel = new Label(Messages.getString("DetailedWeekViewSkin.ALL_DAY")); //$NON-NLS-1$
+        allDayLabel = new Label(Messages.getString("DetailedWeekViewSkin.ALL_DAY"));
         allDayLabel.setTextOverrun(OverrunStyle.CLIP);
-        allDayLabel.getStyleClass().add("all-day-label"); //$NON-NLS-1$
+        allDayLabel.getStyleClass().add("all-day-label");
         allDayLabel.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
         weekdayFillerLeft = new Region();
@@ -78,10 +78,11 @@ public class DetailedWeekViewSkin extends DateControlSkin<DetailedWeekView> {
         allDayFiller.getStyleClass().add("all-day-filler");
 
         WeekTimeScaleView timeScale = view.getTimeScaleView();
-        timeScale.getProperties().put("week.view", view); //$NON-NLS-1$
+        timeScale.getProperties().put("week.view", view);
 
         timeScaleScrollPane = new DayViewScrollPane(timeScale, scrollBar);
-        timeScaleScrollPane.getStyleClass().addAll("timescale-scroll-pane"); //$NON-NLS-1$
+        timeScaleScrollPane.getStyleClass().addAll("timescale-scroll-pane");
+        timeScaleScrollPane.setMinWidth(Region.USE_PREF_SIZE);
 
         // synchronous scrolling
         Bindings.bindBidirectional(timeScale.translateYProperty(), weekView.translateYProperty());

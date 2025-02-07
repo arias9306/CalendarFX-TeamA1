@@ -16,40 +16,52 @@
 
 package impl.com.calendarfx.view;
 
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
-
 import com.calendarfx.model.Calendar;
 import com.calendarfx.model.Entry;
 import com.calendarfx.view.DayEntryView;
+import com.calendarfx.view.DayView;
 import com.calendarfx.view.DraggedEntry;
-
 import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
+import javafx.collections.ObservableMap;
+import javafx.geometry.Orientation;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.SkinBase;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.Region;
 import javafx.scene.shape.Rectangle;
 
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
+import java.time.format.TextStyle;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
 /**
- * The default day entry view. <br />
+ * The default day entry view.
  * It displays a title and the start time of the entry.
  */
 public class DayEntryViewSkin extends SkinBase<DayEntryView> {
 
-    private DateTimeFormatter formatter = DateTimeFormatter
-            .ofLocalizedTime(FormatStyle.SHORT);
+    private final DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT);
 
     protected Label startTimeLabel;
     protected Label titleLabel;
 
     private final InvalidationListener updateStylesListener = it -> updateStyles();
-    private final WeakInvalidationListener weakUpdateStylesListener = new WeakInvalidationListener(
-            updateStylesListener);
+    private final WeakInvalidationListener weakUpdateStylesListener = new WeakInvalidationListener(updateStylesListener);
 
     private final InvalidationListener updateLabelsListener = it -> updateLabels();
-    private final WeakInvalidationListener weakUpdateLabelsListener = new WeakInvalidationListener(
-            updateLabelsListener);
+    private final WeakInvalidationListener weakUpdateLabelsListener = new WeakInvalidationListener(updateLabelsListener);
 
     public DayEntryViewSkin(DayEntryView view) {
         super(view);
@@ -78,11 +90,87 @@ public class DayEntryViewSkin extends SkinBase<DayEntryView> {
         clip.heightProperty().bind(view.heightProperty());
         view.setClip(clip);
 
+        view.nodesProperty().addListener((Observable it) -> updateNodes());
         updateStyles();
+        updateNodes();
+    }
+
+    private void updateNodes() {
+        final DayEntryView view = getSkinnable();
+        final ObservableMap<Pos, List<Node>> nodes = view.getNodes();
+
+        if (nodes != null) {
+            Set<Pos> previouslyUsedPositions = null;
+            if (nodePanes != null) {
+                previouslyUsedPositions = nodePanes.keySet();
+            }
+
+            final Set<Pos> currentlyUsedPositions = nodes.keySet();
+
+            // we have to remove some previously used flow panes from the entry view
+            if (previouslyUsedPositions != null) {
+                previouslyUsedPositions.removeAll(currentlyUsedPositions);
+                for (Pos next : previouslyUsedPositions) {
+                    final FlowPane removedPane = nodePanes.remove(next);
+                    getChildren().remove(removedPane);
+                }
+            }
+
+            currentlyUsedPositions.forEach(pos -> createPosition(pos, nodes.get(pos)));
+        }
+
+        if (nodePanes != null && nodePanes.isEmpty()) {
+            nodePanes = null;
+        }
+    }
+
+    private Map<Pos, FlowPane> nodePanes;
+
+    private void createPosition(Pos pos, List<Node> nodes) {
+        if (nodePanes == null) {
+            nodePanes = new HashMap<>();
+        }
+
+        FlowPane flowPane = nodePanes.computeIfAbsent(pos, p -> {
+            FlowPane pane = new FlowPane();
+            pane.getStyleClass().add("icon-flow-pane");
+            pane.setPrefWidth(Region.USE_COMPUTED_SIZE);
+            pane.setPrefHeight(Region.USE_COMPUTED_SIZE);
+            pane.setManaged(false);
+            pane.setMouseTransparent(true);
+
+            switch (pos) {
+                case TOP_CENTER:
+                case CENTER:
+                case BOTTOM_RIGHT:
+                case BASELINE_LEFT:
+                case BASELINE_CENTER:
+                case BOTTOM_LEFT:
+                case BOTTOM_CENTER:
+                case BASELINE_RIGHT:
+                    pane.setOrientation(Orientation.HORIZONTAL);
+                    pane.prefWrapLengthProperty().bind(getSkinnable().widthProperty());
+                    break;
+                case TOP_LEFT:
+                case TOP_RIGHT:
+                case CENTER_LEFT:
+                case CENTER_RIGHT:
+                    pane.setOrientation(Orientation.VERTICAL);
+                    pane.prefWrapLengthProperty().bind(getSkinnable().heightProperty());
+                    break;
+            }
+
+            pane.setAlignment(pos);
+
+            getChildren().add(pane);
+            return pane;
+        });
+
+        flowPane.getChildren().setAll(nodes);
     }
 
     /**
-     * @returns The entry.
+     * @return The entry.
      */
     protected Entry<?> getEntry() {
         Entry<?> entry = getSkinnable().getEntry();
@@ -93,7 +181,7 @@ public class DayEntryViewSkin extends SkinBase<DayEntryView> {
     }
 
     /**
-     * This methods updates the styles of the node according to the entry
+     * This method updates the styles of the node according to the entry
      * settings.
      */
     protected void updateStyles() {
@@ -111,47 +199,45 @@ public class DayEntryViewSkin extends SkinBase<DayEntryView> {
             return;
         }
 
-        view.getStyleClass().setAll("default-style-entry",
-                calendar.getStyle() + "-entry");
+        view.getStyleClass().setAll("default-style-entry", calendar.getStyle() + "-entry");
 
         if (entry.isRecurrence()) {
-            view.getStyleClass().add("recurrence"); //$NON-NLS-1$
+            view.getStyleClass().add("recurrence");
         }
 
-        startTimeLabel.getStyleClass().setAll("start-time-label",
-                "default-style-entry-time-label",
-                calendar.getStyle() + "-entry-time-label");
-        titleLabel.getStyleClass().setAll("title-label",
-                "default-style-entry-title-label",
-                calendar.getStyle() + "-entry-title-label");
+        view.getStyleClass().addAll(entry.getStyleClass());
+
+        startTimeLabel.getStyleClass().setAll("start-time-label", "default-style-entry-time-label", calendar.getStyle() + "-entry-time-label");
+        titleLabel.getStyleClass().setAll("title-label", "default-style-entry-title-label", calendar.getStyle() + "-entry-title-label");
     }
 
     /**
      * The label used to show the start time.
      *
-     * @returns The label component.
+     * @return The label component.
      */
     protected Label createStartTimeLabel() {
         Label label = new Label();
         label.setMinSize(0, 0);
-
         return label;
     }
 
     /**
      * Convert the given time to a string.
      *
-     * @returns The formatted time.
+     * @param time the time
+     * @return The formatted time.
      */
-    protected String formatTime(LocalTime time) {
-        return formatter.format(time);
+    protected String formatTime(ZonedDateTime time, ZoneId zoneId) {
+        return formatter.format(time.withZoneSameInstant(zoneId));
     }
 
     /**
      * Convert the given title. This method can be overridden for e.g.
      * translating the title.
      *
-     * @returns The formatted title.
+     * @param title the title
+     * @return The formatted title.
      */
     protected String formatTitle(String title) {
         return title;
@@ -160,7 +246,7 @@ public class DayEntryViewSkin extends SkinBase<DayEntryView> {
     /**
      * The label used to show the title.
      *
-     * @returns The title component.
+     * @return The title component.
      */
     protected Label createTitleLabel() {
         Label label = new Label();
@@ -176,45 +262,87 @@ public class DayEntryViewSkin extends SkinBase<DayEntryView> {
     protected void updateLabels() {
         Entry<?> entry = getEntry();
 
-        startTimeLabel.setText(formatTime(entry.getStartTime()));
+        DayView dateControl = getSkinnable().getDateControl();
+        ZonedDateTime startTime = entry.getStartAsZonedDateTime();
+
+        if (!Objects.equals(dateControl.getZoneId(), entry.getZoneId())) {
+            startTimeLabel.setText(formatTime(startTime, dateControl.getZoneId()) + " (" + formatTime(startTime, entry.getZoneId()) + " " + entry.getZoneId().getDisplayName(TextStyle.SHORT, Locale.getDefault()) + ")");
+        } else {
+            startTimeLabel.setText(formatTime(startTime, dateControl.getZoneId()));
+        }
         titleLabel.setText(formatTitle(entry.getTitle()));
     }
 
     @Override
-    protected void layoutChildren(double contentX, double contentY,
-            double contentWidth, double contentHeight) {
+    protected void layoutChildren(double contentX, double contentY, double contentWidth, double contentHeight) {
         // title label
         double titleHeight = titleLabel.prefHeight(contentWidth);
 
         // it is guaranteed that we have enough height to display the title (see
         // "computeMinHeight")
-        titleLabel.resizeRelocate(snapPosition(contentX),
-                snapPosition(contentY), snapSize(contentWidth),
-                snapSize(titleHeight));
+        titleLabel.resizeRelocate(snapPositionX(contentX), snapPositionY(contentY), snapSizeX(contentWidth), snapSizeY(titleHeight));
 
         // start time label
         double timeLabelHeight = startTimeLabel.prefHeight(contentWidth);
         if (contentHeight - titleHeight > timeLabelHeight) {
             startTimeLabel.setVisible(true);
-            startTimeLabel.resizeRelocate(snapPosition(contentX),
-                    snapPosition(contentY + titleHeight),
-                    snapSize(contentWidth), snapSize(timeLabelHeight));
+            startTimeLabel.resizeRelocate(snapPositionX(contentX), snapPositionY(contentY + titleHeight), snapSizeX(contentWidth), snapSizeY(timeLabelHeight));
         } else {
             startTimeLabel.setVisible(false);
+        }
+
+        if (nodePanes != null) {
+            nodePanes.keySet().forEach(pos -> layoutNodesPane(pos, nodePanes.get(pos), contentX, contentY, contentWidth, contentHeight));
+        }
+    }
+
+    private void layoutNodesPane(Pos pos, FlowPane flowPane, double x, double y, double w, double h) {
+        double pw = flowPane.prefWidth(-1);
+        double ph = flowPane.prefHeight(-1);
+
+        switch (pos) {
+            case TOP_LEFT:
+                flowPane.resizeRelocate(x, y, pw, ph);
+                break;
+            case TOP_CENTER:
+                flowPane.resizeRelocate(x + w / 2 - pw / 2, y, pw, ph);
+                break;
+            case TOP_RIGHT:
+                flowPane.resizeRelocate(x + w - pw, y, pw, ph);
+                break;
+            case BOTTOM_LEFT:
+            case BASELINE_LEFT:
+                flowPane.resizeRelocate(x, h - ph, pw, ph);
+                break;
+            case BOTTOM_CENTER:
+            case BASELINE_CENTER:
+                flowPane.resizeRelocate(x + w / 2 - pw / 2, h - ph, pw, ph);
+                break;
+            case BOTTOM_RIGHT:
+            case BASELINE_RIGHT:
+                flowPane.resizeRelocate(x + w - pw, h - ph, pw, ph);
+                break;
+            case CENTER_LEFT:
+                flowPane.resizeRelocate(x, y + h / 2 - ph / 2, pw, ph);
+                break;
+            case CENTER:
+                flowPane.resizeRelocate(x + w / 2 - pw / 2, y + h / 2 - ph / 2, pw, ph);
+                break;
+            case CENTER_RIGHT:
+                flowPane.resizeRelocate(x + w - pw, y + h / 2 - ph / 2, pw, ph);
+                break;
         }
     }
 
     @Override
     protected double computeMinHeight(double width, double topInset,
-            double rightInset, double bottomInset, double leftInset) {
-        if (titleLabel != null) {
+                                      double rightInset, double bottomInset, double leftInset) {
+        if (titleLabel != null && getSkinnable().isMinHeightEqualToTitleHeight()) {
             // For this pref height calculation we do not consider the available
-            // width because
-            // we only want to show a single line of text anyways.
+            // width because we only want to show a single line of text.
             return titleLabel.prefHeight(-1) + topInset + bottomInset;
         }
 
-        return super.computeMinHeight(width, topInset, rightInset, bottomInset,
-                leftInset);
+        return super.computeMinHeight(width, topInset, rightInset, bottomInset, leftInset);
     }
 }

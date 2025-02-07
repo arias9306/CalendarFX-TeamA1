@@ -16,7 +16,7 @@
 
 package com.calendarfx.view;
 
-import impl.com.calendarfx.view.ViewHelper;
+import com.calendarfx.util.ViewHelper;
 import impl.com.calendarfx.view.WeekViewSkin;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
@@ -31,10 +31,12 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
 import javafx.scene.control.Skin;
+import javafx.scene.layout.Region;
 import javafx.util.Callback;
 import org.controlsfx.control.PropertySheet;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Objects;
 import java.util.Optional;
@@ -49,10 +51,10 @@ import static java.util.Objects.requireNonNull;
  * is required for creating the child control {@link AllDayView}. The image
  * below shows the appearance of this view when it is embedded inside the
  * {@link DetailedWeekView}.
- * <p>
- * <p/>
- * <center><img src="doc-files/week-view.png"></center>
- * <p/>
+ *
+ *
+ * <img src="doc-files/week-view.png" alt="Week View">
+ *
  */
 public class WeekView extends DayViewBase {
 
@@ -75,6 +77,7 @@ public class WeekView extends DayViewBase {
 
         setWeekDayViewFactory(param -> new WeekDayView());
         setNumberOfDays(numberOfDays);
+        setShowToday(true);
 
         dateProperty().addListener(it -> updateStartAndEndDates());
 
@@ -87,13 +90,13 @@ public class WeekView extends DayViewBase {
     }
 
     @Override
-    public ZonedDateTime getZonedDateTimeAt(double x, double y) {
+    public ZonedDateTime getZonedDateTimeAt(double x, double y, ZoneId zoneId) {
         final WeekDayView view = getWeekDayViewAt(x);
         if (view != null) {
-            return ZonedDateTime.of(ViewHelper.getLocationTime(view, y, false, true), getZoneId());
+            return ZonedDateTime.ofInstant(ViewHelper.getInstantAt(view, y), getZoneId());
         }
 
-        return super.getZonedDateTimeAt(x, y);
+        return super.getZonedDateTimeAt(x, y, zoneId);
     }
 
     private WeekDayView getWeekDayViewAt(double x) {
@@ -121,7 +124,7 @@ public class WeekView extends DayViewBase {
         return weekDayViews;
     }
 
-    private final IntegerProperty numberOfDays = new SimpleIntegerProperty(this, "numberOfDays", 7); //$NON-NLS-1$
+    private final IntegerProperty numberOfDays = new SimpleIntegerProperty(this, "numberOfDays", 7);
 
     /**
      * Stores the number of days that will be shown by this view. This value
@@ -150,14 +153,14 @@ public class WeekView extends DayViewBase {
      */
     public final void setNumberOfDays(int number) {
         if (number < 1) {
-            throw new IllegalArgumentException("invalid number of days, must be larger than 0 but was " //$NON-NLS-1$
+            throw new IllegalArgumentException("invalid number of days, must be larger than 0 but was "
                     + number);
         }
 
         numberOfDaysProperty().set(number);
     }
 
-    private final BooleanProperty adjustToFirstDayOfWeek = new SimpleBooleanProperty(this, "adjustToFirstDayOfWeek", true); //$NON-NLS-1$
+    private final BooleanProperty adjustToFirstDayOfWeek = new SimpleBooleanProperty(this, "adjustToFirstDayOfWeek", true);
 
     /**
      * A flag used to indicate that the view should always show the first day of
@@ -195,7 +198,7 @@ public class WeekView extends DayViewBase {
      */
     public static final class WeekDayParameter {
 
-        private WeekView weekView;
+        private final WeekView weekView;
 
         /**
          * Constructs a new parameter object.
@@ -216,7 +219,7 @@ public class WeekView extends DayViewBase {
         }
     }
 
-    private final ObjectProperty<Callback<WeekDayParameter, WeekDayView>> weekDayViewFactory = new SimpleObjectProperty<>(this, "weekDayViewFactory"); //$NON-NLS-1$
+    private final ObjectProperty<Callback<WeekDayParameter, WeekDayView>> weekDayViewFactory = new SimpleObjectProperty<>(this, "weekDayViewFactory");
 
     /**
      * A factory used for creating instances of {@link WeekDayView} on the fly
@@ -268,7 +271,7 @@ public class WeekView extends DayViewBase {
         return startDate;
     }
 
-    private final ReadOnlyObjectWrapper<LocalDate> startDate = new ReadOnlyObjectWrapper<>(this, "startDate"); //$NON-NLS-1$
+    private final ReadOnlyObjectWrapper<LocalDate> startDate = new ReadOnlyObjectWrapper<>(this, "startDate");
 
     /**
      * The earliest date shown by the view.
@@ -288,7 +291,7 @@ public class WeekView extends DayViewBase {
         return startDate.get();
     }
 
-    private final ReadOnlyObjectWrapper<LocalDate> endDate = new ReadOnlyObjectWrapper<>(this, "endDate"); //$NON-NLS-1$
+    private final ReadOnlyObjectWrapper<LocalDate> endDate = new ReadOnlyObjectWrapper<>(this, "endDate");
 
     /**
      * The latest date shown by the view.
@@ -308,7 +311,31 @@ public class WeekView extends DayViewBase {
         return endDate.get();
     }
 
-    private static final String WEEK_VIEW_CATEGORY = "Week View"; //$NON-NLS-1$
+    private final ObjectProperty<Callback<WeekView, Region>> separatorFactory = new SimpleObjectProperty<>(this, "separatorFactory", it-> {
+        Region region = new Region();
+        region.getStyleClass().add("weekday-separator");
+        return region;
+    });
+
+
+    public final Callback<WeekView, Region> getSeparatorFactory() {
+        return separatorFactory.get();
+    }
+
+    /**
+     * A factory used for creating (optional) vertical separators between the week days.
+     *
+     * @return the separator factory
+     */
+    public final ObjectProperty<Callback<WeekView, Region>> separatorFactoryProperty() {
+        return separatorFactory;
+    }
+
+    public final void setSeparatorFactory(Callback<WeekView, Region> separatorFactory) {
+        this.separatorFactory.set(separatorFactory);
+    }
+
+    private static final String WEEK_VIEW_CATEGORY = "Week View";
 
     @Override
     public ObservableList<PropertySheet.Item> getPropertySheetItems() {
@@ -338,12 +365,12 @@ public class WeekView extends DayViewBase {
 
             @Override
             public String getName() {
-                return "Number of Days"; //$NON-NLS-1$
+                return "Number of Days";
             }
 
             @Override
             public String getDescription() {
-                return "Number of Days"; //$NON-NLS-1$
+                return "Number of Days";
             }
 
             @Override
@@ -376,12 +403,12 @@ public class WeekView extends DayViewBase {
 
             @Override
             public String getName() {
-                return "Adjust to first day of week"; //$NON-NLS-1$
+                return "Adjust to first day of week";
             }
 
             @Override
             public String getDescription() {
-                return "Adjust to first day of week"; //$NON-NLS-1$
+                return "Adjust to first day of week";
             }
 
             @Override
@@ -413,12 +440,12 @@ public class WeekView extends DayViewBase {
 
             @Override
             public String getName() {
-                return "Start date (read-only)"; //$NON-NLS-1$
+                return "Start date (read-only)";
             }
 
             @Override
             public String getDescription() {
-                return "Start date (read-only)"; //$NON-NLS-1$
+                return "Start date (read-only)";
             }
 
             @Override
@@ -450,12 +477,12 @@ public class WeekView extends DayViewBase {
 
             @Override
             public String getName() {
-                return "End date (read-only)"; //$NON-NLS-1$
+                return "End date (read-only)";
             }
 
             @Override
             public String getDescription() {
-                return "End date (read-only)"; //$NON-NLS-1$
+                return "End date (read-only)";
             }
 
             @Override

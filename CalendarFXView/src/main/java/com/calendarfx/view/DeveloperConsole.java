@@ -26,11 +26,11 @@ import javafx.scene.control.TabPane;
  * A control used for showing the internals of CalendarFX at work. Helps
  * detecting problems. Developers can freely add their own tabs to the tab pane.
  * <h3>Screenshot</h3>
- * <center><img alt="developer console" src="doc-files/developer-console.png"></center>
+ * <img alt="Developer Console" src="doc-files/developer-console.png">
  */
 public class DeveloperConsole extends CalendarFXControl {
 
-    private static final String DEFAULT_STYLE_CLASS = "developer-console"; //$NON-NLS-1$
+    private static final String DEFAULT_STYLE_CLASS = "developer-console";
 
     private TabPane tabPane = new TabPane();
 
@@ -59,7 +59,7 @@ public class DeveloperConsole extends CalendarFXControl {
     }
 
     private final ObjectProperty<DateControl> dateControl = new SimpleObjectProperty<>(
-            this, "dateControl"); //$NON-NLS-1$
+            this, "dateControl");
 
     /**
      * Stores a reference to the date control that will be monitored by the

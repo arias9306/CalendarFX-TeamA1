@@ -27,10 +27,10 @@ import static java.util.Objects.requireNonNull;
  * An event class used to signal changes done within a calendar or changes done
  * to a calendar entry. Events of this type can be received by adding an event
  * handler to a calendar.
- * <p/>
- * <p>
+ *
+ *
  * <h2>Example</h2>
- * <p>
+ *
  * <pre>
  * {@code
  * Calendar calendar = new Calendar("Home");
@@ -48,30 +48,26 @@ public class CalendarEvent extends Event {
     /**
      * The supertype of all event types in this event class.
      */
-    public static final EventType<CalendarEvent> ANY = new EventType<>(
-            Event.ANY, "ANY"); //$NON-NLS-1$
+    public static final EventType<CalendarEvent> ANY = new EventType<>(Event.ANY, "CALENDAR");
 
     /**
      * An event type used to inform the application that "something" inside the
      * calendar has changed and that the views need to update their visuals
      * accordingly (brute force update).
      */
-    public static final EventType<CalendarEvent> CALENDAR_CHANGED = new EventType<>(
-            CalendarEvent.ANY, "CALENDAR_CHANGED"); //$NON-NLS-1$
+    public static final EventType<CalendarEvent> CALENDAR_CHANGED = new EventType<>(CalendarEvent.ANY, "CALENDAR_CHANGED");
 
     /**
      * The supertype of all events that a related to an entry itself and not the
      * calendar.
      */
-    public static final EventType<CalendarEvent> ENTRY_CHANGED = new EventType<>(
-            CalendarEvent.ANY, "ENTRY_CHANGED"); //$NON-NLS-1$
+    public static final EventType<CalendarEvent> ENTRY_CHANGED = new EventType<>(CalendarEvent.ANY, "ENTRY_CHANGED");
 
     /**
      * An event type used to inform the application that an entry has been moved
      * from one calendar to another.
      */
-    public static final EventType<CalendarEvent> ENTRY_CALENDAR_CHANGED = new EventType<>(
-            CalendarEvent.ENTRY_CHANGED, "ENTRY_CALENDAR_CHANGED"); //$NON-NLS-1$
+    public static final EventType<CalendarEvent> ENTRY_CALENDAR_CHANGED = new EventType<>(CalendarEvent.ENTRY_CHANGED, "ENTRY_CALENDAR_CHANGED");
 
     /**
      * An event type used to inform the application that an entry has become a
@@ -79,48 +75,42 @@ public class CalendarEvent extends Event {
      * The entry should be visualized in a way that signals that the entry will
      * take all day (e.g. a birthday).
      */
-    public static final EventType<CalendarEvent> ENTRY_FULL_DAY_CHANGED = new EventType<>(
-            CalendarEvent.ENTRY_CHANGED, "ENTRY_FULL_DAY_CHANGED"); //$NON-NLS-1$
+    public static final EventType<CalendarEvent> ENTRY_FULL_DAY_CHANGED = new EventType<>(CalendarEvent.ENTRY_CHANGED, "ENTRY_FULL_DAY_CHANGED");
 
     /**
      * An event type used to inform the application that an entry has been
      * assigned a new user object.
      */
-    public static final EventType<CalendarEvent> ENTRY_RECURRENCE_RULE_CHANGED = new EventType<>(
-            CalendarEvent.ENTRY_CHANGED, "ENTRY_RECURRENCE_RULE_CHANGED"); //$NON-NLS-1$
+    public static final EventType<CalendarEvent> ENTRY_RECURRENCE_RULE_CHANGED = new EventType<>(CalendarEvent.ENTRY_CHANGED, "ENTRY_RECURRENCE_RULE_CHANGED");
 
     /**
      * An event type used to inform the application that an entry has been
      * assigned a new title.
      */
-    public static final EventType<CalendarEvent> ENTRY_TITLE_CHANGED = new EventType<>(
-            CalendarEvent.ENTRY_CHANGED, "ENTRY_TITLE_CHANGED"); //$NON-NLS-1$
+    public static final EventType<CalendarEvent> ENTRY_TITLE_CHANGED = new EventType<>(CalendarEvent.ENTRY_CHANGED, "ENTRY_TITLE_CHANGED");
 
     /**
      * An event type used to inform the application that an entry has been
      * assigned a new user object.
      */
-    public static final EventType<CalendarEvent> ENTRY_USER_OBJECT_CHANGED = new EventType<>(
-            CalendarEvent.ENTRY_CHANGED, "ENTRY_USER_OBJECT_CHANGED"); //$NON-NLS-1$
+    public static final EventType<CalendarEvent> ENTRY_USER_OBJECT_CHANGED = new EventType<>(CalendarEvent.ENTRY_CHANGED, "ENTRY_USER_OBJECT_CHANGED");
 
     /**
      * An event type used to inform the application that an entry has been
      * assigned a new user object.
      */
-    public static final EventType<CalendarEvent> ENTRY_LOCATION_CHANGED = new EventType<>(
-            CalendarEvent.ENTRY_CHANGED, "ENTRY_LOCATION_CHANGED"); //$NON-NLS-1$
+    public static final EventType<CalendarEvent> ENTRY_LOCATION_CHANGED = new EventType<>(CalendarEvent.ENTRY_CHANGED, "ENTRY_LOCATION_CHANGED");
 
     /**
      * An event type used to inform the application that the time bounds of an
      * entry have been changed. One or several of start / end date, start / end
      * time.
      */
-    public static final EventType<CalendarEvent> ENTRY_INTERVAL_CHANGED = new EventType<>(
-            CalendarEvent.ENTRY_CHANGED, "ENTRY_INTERVAL_CHANGED"); //$NON-NLS-1$
+    public static final EventType<CalendarEvent> ENTRY_INTERVAL_CHANGED = new EventType<>(CalendarEvent.ENTRY_CHANGED, "ENTRY_INTERVAL_CHANGED");
 
     private Entry<?> entry;
 
-    private Calendar calendar;
+    private final Calendar calendar;
 
     private boolean oldFullDay;
 
@@ -138,8 +128,7 @@ public class CalendarEvent extends Event {
      * @param eventType the event type
      * @param calendar  the calendar where the event occurred.
      */
-    protected CalendarEvent(EventType<? extends CalendarEvent> eventType,
-                            Calendar calendar) {
+    protected CalendarEvent(EventType<? extends CalendarEvent> eventType, Calendar calendar) {
         super(calendar, calendar, eventType);
 
         this.calendar = requireNonNull(calendar);
@@ -152,8 +141,7 @@ public class CalendarEvent extends Event {
      * @param calendar  the calendar where the event occured
      * @param entry     the affected entry
      */
-    public CalendarEvent(EventType<? extends CalendarEvent> eventType,
-                         Calendar calendar, Entry<?> entry) {
+    public CalendarEvent(EventType<? extends CalendarEvent> eventType, Calendar calendar, Entry<?> entry) {
         super(calendar, calendar, eventType);
 
         this.calendar = calendar;
@@ -170,8 +158,7 @@ public class CalendarEvent extends Event {
      * @param entry       the affected entry
      * @param oldCalendar the calendar to which the event belonged before
      */
-    public CalendarEvent(EventType<CalendarEvent> eventType, Calendar calendar,
-                         Entry<?> entry, Calendar oldCalendar) {
+    public CalendarEvent(EventType<CalendarEvent> eventType, Calendar calendar, Entry<?> entry, Calendar oldCalendar) {
         this(eventType, calendar, entry);
         this.oldCalendar = oldCalendar;
     }
@@ -186,8 +173,7 @@ public class CalendarEvent extends Event {
      * @param entry         the affected entry
      * @param oldUserObject the calendar to which the event belonged before
      */
-    public CalendarEvent(EventType<CalendarEvent> eventType, Calendar calendar,
-                         Entry<?> entry, Object oldUserObject) {
+    public CalendarEvent(EventType<CalendarEvent> eventType, Calendar calendar, Entry<?> entry, Object oldUserObject) {
         this(eventType, calendar, entry);
         this.oldUserObject = oldUserObject;
     }
@@ -202,8 +188,7 @@ public class CalendarEvent extends Event {
      * @param entry       the affected entry
      * @param oldInterval the previous time interval
      */
-    public CalendarEvent(EventType<CalendarEvent> eventType, Calendar calendar,
-                         Entry<?> entry, Interval oldInterval) {
+    public CalendarEvent(EventType<CalendarEvent> eventType, Calendar calendar, Entry<?> entry, Interval oldInterval) {
         this(eventType, calendar, entry);
         this.oldInterval = requireNonNull(oldInterval);
     }
@@ -218,8 +203,7 @@ public class CalendarEvent extends Event {
      * @param entry     the affected entry
      * @param oldText   the previous value of the text
      */
-    public CalendarEvent(EventType<CalendarEvent> eventType, Calendar calendar,
-                         Entry<?> entry, String oldText) {
+    public CalendarEvent(EventType<CalendarEvent> eventType, Calendar calendar, Entry<?> entry, String oldText) {
         this(eventType, calendar, entry);
         this.oldText = oldText;
     }
@@ -234,8 +218,7 @@ public class CalendarEvent extends Event {
      * @param entry      the affected entry
      * @param oldFullDay the previous value of the full day
      */
-    public CalendarEvent(EventType<CalendarEvent> eventType, Calendar calendar,
-                         Entry<?> entry, boolean oldFullDay) {
+    public CalendarEvent(EventType<CalendarEvent> eventType, Calendar calendar, Entry<?> entry, boolean oldFullDay) {
         this(eventType, calendar, entry);
         this.oldFullDay = oldFullDay;
     }
@@ -363,12 +346,12 @@ public class CalendarEvent extends Event {
 
     @Override
     public String toString() {
-        return "CalendarEvent [" //$NON-NLS-1$
-                + (entry == null ? "" : ("entry=" + entry + ", ")) + "calendar=" //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
-                + calendar + ", oldInterval=" + oldInterval + ", oldFullDay=" //$NON-NLS-1$ //$NON-NLS-2$
-                + oldFullDay + ", oldText=" + oldText + ", oldCalendar=" //$NON-NLS-1$ //$NON-NLS-2$
-                + oldCalendar + ", eventType=" + eventType + ", target=" //$NON-NLS-1$ //$NON-NLS-2$
-                + target + ", consumed=" + consumed + ", source=" + source //$NON-NLS-1$ //$NON-NLS-2$
-                + "]"; //$NON-NLS-1$
+        return "CalendarEvent ["
+                + (entry == null ? "" : ("entry=" + entry + ", ")) + "calendar="
+                + calendar + ", oldInterval=" + oldInterval + ", oldFullDay="
+                + oldFullDay + ", oldText=" + oldText + ", oldCalendar="
+                + oldCalendar + ", eventType=" + eventType + ", target="
+                + target + ", consumed=" + consumed + ", source=" + source
+                + "]";
     }
 }

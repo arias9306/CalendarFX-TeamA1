@@ -20,6 +20,7 @@ import com.calendarfx.model.Calendar;
 import com.calendarfx.model.Calendar.Style;
 import com.calendarfx.model.CalendarSource;
 import com.calendarfx.view.CalendarView;
+import fr.brouillard.oss.cssfx.CSSFX;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -32,8 +33,9 @@ import java.time.LocalTime;
 public class CalendarApp extends Application {
 
     @Override
-    public void start(Stage primaryStage) throws Exception {
+    public void start(Stage primaryStage) {
         CalendarView calendarView = new CalendarView();
+        calendarView.setEnableTimeZoneSupport(true);
 
         Calendar katja = new Calendar("Katja");
         Calendar dirk = new Calendar("Dirk");
@@ -93,10 +95,13 @@ public class CalendarApp extends Application {
         updateTimeThread.start();
 
         Scene scene = new Scene(stackPane);
+        scene.focusOwnerProperty().addListener(it -> System.out.println("focus owner: " + scene.getFocusOwner()));
+        CSSFX.start(scene);
+
         primaryStage.setTitle("Calendar");
         primaryStage.setScene(scene);
         primaryStage.setWidth(1300);
-        primaryStage.setHeight(700);
+        primaryStage.setHeight(1000);
         primaryStage.centerOnScreen();
         primaryStage.show();
     }

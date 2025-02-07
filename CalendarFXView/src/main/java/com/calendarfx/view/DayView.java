@@ -16,45 +16,44 @@
 
 package com.calendarfx.view;
 
-import static java.util.Objects.requireNonNull;
-
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
-
 import com.calendarfx.model.Calendar;
 import com.calendarfx.model.Entry;
-
 import impl.com.calendarfx.view.DayViewSkin;
-import javafx.beans.Observable;
+import javafx.beans.InvalidationListener;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.control.Skin;
 import javafx.util.Callback;
 
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
+
+import static java.util.Objects.requireNonNull;
+
 /**
  * A view representing a single day. This view can be customized to show all 24
  * hours at equal height, compress the early and late hours (unused hours), or
  * to hide these hours altogether.
- * <p/>
+ *
  * The view uses a factory to create instances of {@link DayEntryView}.
  * Applications can plug in their own factory to customize the appearance of
  * entry views.
- * <p/>
+ *
  * New calendar entries can be created by double clicking in the background of
  * the view.
- * <p/>
+ *
  * The image below shows an example of this view with three entry views and
  * compressed early hours.
- * <p/>
- * <center><img src="doc-files/day-view.png"></center>
- * <p/>
+ *
+ * <img src="doc-files/day-view.png" alt="Day View">
+ *
  */
 public class DayView extends DayViewBase {
 
-	private static final String DAY_VIEW = "day-view"; //$NON-NLS-1$
-	private static final String DAY_VIEW_TODAY = "today"; //$NON-NLS-1$
-	private static final String DAY_VIEW_WEEKEND_DAY = "weekend-day"; //$NON-NLS-1$
+	private static final String DAY_VIEW = "day-view";
+	private static final String DAY_VIEW_TODAY = "today";
+	private static final String DAY_VIEW_WEEKEND_DAY = "weekend-day";
 
 	/**
 	 * Constructs a new day view.
@@ -62,15 +61,20 @@ public class DayView extends DayViewBase {
 	public DayView() {
 		getStyleClass().add(DAY_VIEW);
 
-		todayProperty().addListener(evt -> updateStyleClasses());
-		dateProperty().addListener(evt -> updateStyleClasses());
-		selectionModeProperty().addListener(evt -> getSelections().clear());
-		getWeekendDays().addListener((Observable it) -> updateStyleClasses());
+		InvalidationListener updateStyleClassListener = it -> updateStyleClasses();
+
+		showTodayProperty().addListener(updateStyleClassListener);
+		todayProperty().addListener(updateStyleClassListener);
+		dateProperty().addListener(updateStyleClassListener);
+		getWeekendDays().addListener(updateStyleClassListener);
 		updateStyleClasses();
 
-		setEntryViewFactory(DayEntryView::new);
+		selectionModeProperty().addListener(evt -> getSelections().clear());
 
-		new CreateDeleteHandler(this);
+		setEntryViewFactory(DayEntryView::new);
+		setMinWidth(0); // important, so that multi day views apply same width for all day views
+
+		new DeleteHandler(this);
 	}
 
 	@Override
@@ -80,7 +84,7 @@ public class DayView extends DayViewBase {
 
 	private void updateStyleClasses() {
 		LocalDate date = getDate();
-		if (date.equals(getToday())) {
+		if (date.equals(getToday()) && isShowToday()) {
 			if (!getStyleClass().contains(DAY_VIEW_TODAY)) {
 				getStyleClass().add(DAY_VIEW_TODAY);
 			}
@@ -100,8 +104,7 @@ public class DayView extends DayViewBase {
 	@Override
 	public Optional<Calendar> getCalendarAt(double x, double y) {
 		if (getLayout().equals(Layout.SWIMLANE)) {
-			List<Calendar> visibleCalendars = getCalendars()
-					.filtered(this::isCalendarVisible);
+			List<Calendar> visibleCalendars = getCalendars().filtered(this::isCalendarVisible);
 			double calendarWidth = getWidth() / visibleCalendars.size();
 			int index = (int) (x / calendarWidth);
 			if (index < visibleCalendars.size()) {
@@ -112,8 +115,7 @@ public class DayView extends DayViewBase {
 		return Optional.empty();
 	}
 
-	private final ObjectProperty<Callback<Entry<?>, DayEntryView>> entryViewFactory = new SimpleObjectProperty<>(
-			this, "entryViewFactory"); //$NON-NLS-1$
+	private final ObjectProperty<Callback<Entry<?>, DayEntryView>> entryViewFactory = new SimpleObjectProperty<>(this, "entryViewFactory");
 
 	/**
 	 * A factory used for creating instances of {@link DayEntryView} for each
@@ -140,8 +142,7 @@ public class DayView extends DayViewBase {
 	 * @param factory
 	 *            the entry view factory
 	 */
-	public final void setEntryViewFactory(
-			Callback<Entry<?>, DayEntryView> factory) {
+	public final void setEntryViewFactory(Callback<Entry<?>, DayEntryView> factory) {
 		requireNonNull(factory);
 		entryViewFactoryProperty().set(factory);
 	}
